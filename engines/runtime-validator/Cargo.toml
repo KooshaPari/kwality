@@ -26,6 +26,10 @@ regex = "1.10"
 walkdir = "2.4"
 sha2 = "0.10"
 async-trait = "0.1"
+futures-util = "0.3"  # For streaming operations with Docker
+rand = "0.8"  # For random number generation in fuzzing
+chrono = { version = "0.4", features = ["serde"] }  # For date/time handling
+levenshtein = "1.0"  # For string distance calculations in fuzzing
 
 [dev-dependencies]
 tokio-test = "0.4"
