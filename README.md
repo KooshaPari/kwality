@@ -1,258 +1,128 @@
-# LLM Validation Platform (Kwality)
+# Kwality - AI Codebase Validation Platform
 
-A comprehensive validation infrastructure for Large Language Models with advanced testing frameworks, observability, and TDD workflows.
+**Comprehensive validation infrastructure for AI-generated codebases with multi-language static analysis, runtime validation, security scanning, and performance testing.**
 
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen)](https://github.com/your-org/kwality)
-[![Coverage](https://img.shields.io/badge/coverage-80%25-yellow)](https://github.com/your-org/kwality)
-[![Node.js](https://img.shields.io/badge/node.js-18%2B-green)](https://nodejs.org/)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://python.org/)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/KooshaPari/kwality)
+[![Go Version](https://img.shields.io/badge/go-1.21%2B-blue)](https://golang.org/)
+[![Rust Version](https://img.shields.io/badge/rust-1.75%2B-orange)](https://rustlang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-## 🚀 Features
+## 🎯 Problem Statement
 
-### Core Validation Frameworks
-- **🧠 DeepEval Integration**: 9 advanced LLM evaluation metrics including correctness, faithfulness, bias detection
-- **🎭 Playwright MCP**: Browser automation for web-based LLM testing with MCP protocol
-- **📊 OpenLLMetry**: Comprehensive observability with semantic, syntactic, safety, and performance metrics
-- **🔗 Neo4j Knowledge Graph**: Test execution relationship analysis and dependency tracking
-- **🔄 Burr+pytest TDD**: Test-driven development workflows with state machine orchestration
+As AI code generation becomes mainstream, there's a critical need to validate that AI-generated code is:
+- **Functionally correct** and meets requirements
+- **Secure** and free from vulnerabilities  
+- **Performant** and scalable
+- **Maintainable** and follows best practices
+- **Safe** to deploy in production environments
 
-### Advanced Capabilities
-- **Claude-Flow Orchestration**: Multi-agent coordination with 17 SPARC development modes
-- **Real-time Monitoring**: Performance metrics, error tracking, and health monitoring
-- **Scalable Architecture**: Horizontal scaling with swarm coordination
-- **Enterprise Security**: Authentication, authorization, and compliance features
+Kwality solves this by providing comprehensive validation of AI-generated codebases before they reach production.
+
+## 🏗️ Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Kwality Validation Platform                 │
+├─────────────────────────────────────────────────────────────────┤
+│  📊 Orchestration Layer (Go)                                   │
+│  ├── Validation Coordinator    ├── Task Queue Manager          │
+│  └── Results Aggregator        └── Health Monitor              │
+├─────────────────────────────────────────────────────────────────┤
+│  🔍 Validation Engines                                         │
+│  ├── Static Analysis (Go)      ├── Runtime Validator (Rust)    │
+│  │   ├── AST Parser            │   ├── Container Executor      │
+│  │   ├── Multi-language Linter │   ├── Performance Profiler   │
+│  │   ├── Code Quality Metrics  │   ├── Memory Analysis        │
+│  │   └── Dependency Scanner    │   └── Fuzzing Engine         │
+│  ├── Security Scanner          ├── Integration Tester          │
+│  │   ├── SAST Analysis         │   ├── API Validation         │
+│  │   ├── Vulnerability Detection│   ├── E2E Testing           │
+│  │   └── Secrets Detection     │   └── Contract Testing       │
+├─────────────────────────────────────────────────────────────────┤
+│  🛡️ Isolation & Safety Layer                                   │
+│  ├── Docker Container Management  ├── Resource Limiting        │
+│  └── Network Isolation           └── Security Monitoring      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 🚀 Key Features
+
+### Multi-Dimensional Validation
+- **Static Analysis**: AST parsing, linting, code quality metrics, dependency analysis
+- **Runtime Validation**: Safe execution in containerized environments with performance monitoring
+- **Security Scanning**: Vulnerability detection, secrets scanning, dependency security analysis
+- **Integration Testing**: API validation, E2E testing, service integration verification
+- **Performance Analysis**: Benchmarking, profiling, resource usage monitoring
+
+### Multi-Language Support
+- **Go**: golangci-lint, go vet, staticcheck, gosec
+- **Rust**: clippy, cargo audit, cargo deny
+- **JavaScript/TypeScript**: ESLint, TSLint, audit
+- **Python**: pylint, bandit, safety
+- **Java**: SpotBugs, PMD, OWASP dependency check
+- **And more**: Extensible architecture for additional languages
+
+### Enterprise-Grade Safety
+- **Containerized Execution**: All code runs in isolated Docker containers
+- **Resource Limits**: CPU, memory, disk, and network constraints
+- **Security Monitoring**: Real-time syscall and behavior monitoring
+- **Network Isolation**: No external network access during validation
+- **Cleanup Automation**: Automatic environment cleanup after validation
 
 ## 📋 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm
-- Python 3.8+ with pip
-- Optional: Docker, Neo4j, Claude API access
+- **Go 1.21+** for the orchestration layer
+- **Rust 1.75+** for the runtime validation engine
+- **Docker** for containerized execution
+- **Optional**: PostgreSQL, Redis for production deployment
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/kwality.git
+git clone https://github.com/KooshaPari/kwality.git
 cd kwality
 
-# Install Node.js dependencies
-npm install
+# Build Go components
+go mod download
+go build -o bin/kwality ./cmd/kwality
 
-# Install Python dependencies
-pip install -r python-tests/requirements.txt
+# Build Rust components
+cd engines/runtime-validator
+cargo build --release
+cd ../..
 
 # Initialize configuration
-cp .env.example .env
-# Edit .env with your API keys and configuration
+cp config.example.yaml config.yaml
+# Edit config.yaml with your settings
 ```
 
 ### Basic Usage
 
 ```bash
 # Start the validation platform
-npm start
+./bin/kwality
 
-# Run all tests
-npm test
+# Validate a codebase via API
+curl -X POST http://localhost:8080/api/v1/validate/codebase \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "ai-generated-service",
+    "source": {
+      "type": "git",
+      "repository": {
+        "url": "https://github.com/example/ai-service.git"
+      }
+    },
+    "config": {
+      "enabled_engines": ["static", "runtime", "security"],
+      "timeout": "10m"
+    }
+  }'
 
-# Start with Claude-Flow orchestration
-./claude-flow start --ui --port 3000
-
-# Run specific validation framework tests
-npm test -- tests/deepeval/
-npm test -- tests/playwright/
-npm test -- tests/neo4j/
-```
-
-## 🏗️ Architecture
-
-### Core Components
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   DeepEval      │    │   Playwright    │    │  OpenLLMetry    │
-│   Framework     │    │   MCP Server    │    │  Integration    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Neo4j KG      │    │  Validation     │    │   Burr+pytest  │
-│   Integration   │────│     Engine      │────│   Integration   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-### Validation Workflow
-
-1. **Test Definition**: Create validation scenarios using DeepEval or custom metrics
-2. **Execution**: Run tests through Playwright MCP or direct LLM APIs
-3. **Monitoring**: Track performance and quality with OpenLLMetry
-4. **Analysis**: Store results in Neo4j for relationship analysis
-5. **TDD Cycles**: Iterate improvements using Burr+pytest workflows
-
-## 📖 Documentation
-
-### Framework-Specific Guides
-
-#### DeepEval Framework
-```javascript
-const { DeepEvalFramework } = require('./src/services/deepeval-framework');
-
-const framework = new DeepEvalFramework();
-await framework.initialize();
-
-const result = await framework.evaluate({
-  prompt: "What is the capital of France?",
-  response: "The capital of France is Paris.",
-  context: "Geography question about European capitals",
-  metrics: ['correctness', 'faithfulness', 'bias']
-});
-
-console.log('Evaluation Results:', result);
-```
-
-#### Playwright MCP Server
-```javascript
-const { PlaywrightMCPServer } = require('./src/services/playwright-mcp-server');
-
-const server = new PlaywrightMCPServer();
-await server.initialize();
-
-const { contextId } = await server.createContext('chromium');
-const { pageId } = await server.createPage(contextId);
-await server.navigate(pageId, 'https://example.com');
-const screenshot = await server.screenshot(pageId);
-```
-
-#### Neo4j Knowledge Graph
-```javascript
-const { Neo4jKnowledgeGraph } = require('./src/services/neo4j-knowledge-graph');
-
-const kg = new Neo4jKnowledgeGraph();
-await kg.initialize();
-
-// Create test execution node
-const execution = await kg.createTestExecution({
-  test_id: 'test-001',
-  status: 'passed',
-  result_score: 0.95
-});
-
-// Analyze dependencies
-const insights = await kg.getValidationInsights();
-```
-
-#### Burr+pytest TDD Workflow
-```javascript
-const { BurrPytestIntegration } = require('./src/services/burr-pytest-integration');
-
-const integration = new BurrPytestIntegration();
-await integration.initialize();
-
-// Create TDD workflow
-const workflow = await integration.createTDDWorkflow({
-  name: 'LLM Validation Workflow',
-  description: 'Test-driven LLM validation'
-});
-
-// Execute Red-Green-Refactor cycle
-const redResult = await integration.executeTDDPhase(workflow.workflow_id, 'red');
-const greenResult = await integration.executeTDDPhase(workflow.workflow_id, 'green');
-const refactorResult = await integration.executeTDDPhase(workflow.workflow_id, 'refactor');
-```
-
-### Claude-Flow Commands
-
-```bash
-# Core system commands
-./claude-flow start --ui --port 3000
-./claude-flow status
-./claude-flow monitor
-
-# Agent management
-./claude-flow agent spawn researcher --name validation-researcher
-./claude-flow agent list
-
-# Swarm coordination
-./claude-flow swarm "Validate LLM responses for safety and accuracy" \
-  --strategy validation --mode distributed --parallel --monitor
-
-# Memory management
-./claude-flow memory store validation_config "Advanced LLM validation settings"
-./claude-flow memory get validation_config
-
-# SPARC development modes
-./claude-flow sparc tdd "Implement bias detection for LLM responses"
-./claude-flow sparc run analyzer "Analyze test execution patterns"
-```
-
-## 🧪 Testing
-
-### Test Suites
-
-- **Unit Tests**: Component-level testing with Jest
-- **Integration Tests**: Cross-component workflow testing
-- **Performance Tests**: Load and scalability testing
-- **Python Tests**: TDD workflow validation with pytest
-
-```bash
-# Run all tests
-npm test
-
-# Run specific test suites
-npm test -- tests/deepeval/
-npm test -- tests/playwright/
-npm test -- tests/observability/
-npm test -- tests/neo4j/
-npm test -- tests/tdd/
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run Python TDD tests
-cd python-tests && python -m pytest tests/
-```
-
-### Test Coverage
-
-| Component | Coverage | Tests |
-|-----------|----------|-------|
-| DeepEval Framework | 92.3% | 25 tests |
-| Playwright MCP | 81.2% | 35 tests |
-| OpenLLMetry | 80.1% | 30 tests |
-| Neo4j Knowledge Graph | 88.5% | 29 tests |
-| Burr+pytest Integration | 78.3% | 36 tests |
-
-## 📊 Monitoring & Observability
-
-### Available Metrics
-
-#### LLM Quality Metrics
-- **Semantic**: Relevance, coherence, factual accuracy, hallucination detection
-- **Syntactic**: Grammar, spelling, punctuation, structure
-- **Safety**: Toxicity, bias, harmful content, privacy risk
-- **Structural**: Completeness, information density, logical flow
-- **Performance**: Response time, token usage, cost per request
-
-#### System Metrics
-- Request/response latencies
-- Error rates and patterns
-- Resource utilization
-- Test execution success rates
-
-### Health Endpoints
-
-```bash
-# Application health
-curl http://localhost:3000/health
-
-# Component-specific health
-curl http://localhost:3000/health/deepeval
-curl http://localhost:3000/health/playwright
-curl http://localhost:3000/health/neo4j
-curl http://localhost:3000/health/openllmetry
+# Check validation results
+curl http://localhost:8080/api/v1/validate/{task-id}
 ```
 
 ## 🔧 Configuration
@@ -260,71 +130,273 @@ curl http://localhost:3000/health/openllmetry
 ### Environment Variables
 
 ```bash
-# API Configuration
-CLAUDE_API_KEY=your_claude_api_key
-OPENAI_API_KEY=your_openai_api_key
+# Server Configuration
+KWALITY_PORT=8080
+KWALITY_ENV=production
 
 # Database Configuration
-NEO4J_URI=bolt://localhost:7687
-NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=password
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=kwality
 
-# Monitoring Configuration
-OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-PROMETHEUS_PORT=9090
+# Container Configuration
+RUNTIME_CONTAINER_IMAGE=kwality/runner:latest
+RUNTIME_MEMORY_LIMIT_MB=512
+RUNTIME_CPU_LIMIT_CORES=1.0
+RUNTIME_TIMEOUT_SECONDS=300
 
-# Python Configuration
-PYTHON_PATH=python3
-PYTEST_PATH=pytest
-PYTEST_COVERAGE=true
-PYTEST_COVERAGE_THRESHOLD=80
-
-# Playwright Configuration
-PLAYWRIGHT_BROWSERS=chromium,firefox,webkit
-PLAYWRIGHT_HEADLESS=true
+# Security Configuration
+SECURITY_ENABLED_SCANNERS=semgrep,gosec,bandit
+SECURITY_SECRETS_DETECTION=true
 ```
 
-### CLAUDE.md Configuration
+### Validation Configuration
 
-The platform includes comprehensive Claude-Flow configuration in `CLAUDE.md` with:
-- Build and test commands
-- Claude-Flow command reference (17 SPARC modes)
-- Integration patterns and workflows
-- Code style preferences
+```yaml
+validation:
+  enabled_engines:
+    - static
+    - runtime
+    - security
+    - integration
+  
+  static_analysis:
+    linters:
+      - golangci-lint
+      - eslint
+      - pylint
+      - clippy
+    max_file_size: 10MB
+    max_files: 1000
+  
+  runtime_validation:
+    container_image: "kwality/runner:latest"
+    timeout_seconds: 300
+    memory_limit_mb: 512
+    cpu_limit_cores: 1.0
+    network_isolation: true
+  
+  security_scanning:
+    scanners:
+      - semgrep
+      - gosec
+      - bandit
+      - cargo-audit
+    vulnerability_dbs:
+      - nvd
+      - ghsa
+    secrets_detection: true
+```
+
+## 🧪 Validation Workflow
+
+### 1. Code Ingestion
+```
+AI-Generated Code → Language Detection → Validation Pipeline Assignment
+```
+
+### 2. Parallel Analysis
+```
+Static Analysis ──┐
+                  ├──→ Orchestrated Execution ──→ Result Aggregation
+Security Scan ────┤
+                  │
+Runtime Tests ────┤
+                  │
+Integration Tests ─┘
+```
+
+### 3. Scoring & Reporting
+```
+Engine Results → Weighted Scoring → Quality Gate → Detailed Report
+```
+
+## 📊 Validation Categories
+
+### Static Analysis Validation
+- **Code Quality**: Complexity, maintainability, readability scores
+- **Best Practices**: Coding standards, architectural patterns
+- **Dependencies**: Security vulnerabilities, license compliance
+- **Documentation**: API documentation, comment coverage
+
+### Runtime Validation  
+- **Functional Correctness**: Does the code execute as intended?
+- **Performance**: CPU, memory, I/O efficiency under load
+- **Resource Usage**: Memory leaks, resource exhaustion
+- **Error Handling**: Graceful failure and recovery
+
+### Security Validation
+- **Vulnerability Scanning**: Known CVEs, security hotspots
+- **Secrets Detection**: Hardcoded credentials, API keys
+- **Input Validation**: Injection attack prevention
+- **Access Control**: Authentication and authorization
+
+### Integration Validation
+- **API Compliance**: OpenAPI specification adherence
+- **Service Integration**: Database, external service interaction
+- **Contract Testing**: Interface compatibility
+- **End-to-End Flows**: Complete user journey validation
+
+## 🎯 Scoring System
+
+### Quality Dimensions (Weighted)
+- **Correctness** (30%): Functional accuracy, test coverage
+- **Security** (25%): Vulnerability-free, secure practices  
+- **Performance** (20%): Efficiency, scalability
+- **Maintainability** (15%): Code quality, documentation
+- **Reliability** (10%): Error handling, robustness
+
+### Quality Gates
+```
+✅ PASS: Overall Score ≥ 80 AND Security Score ≥ 90
+⚠️  CONDITIONAL: Overall Score ≥ 70 OR Security Score < 90
+❌ FAIL: Overall Score < 70 OR Critical Security Issues
+```
+
+## 🔐 Security & Safety
+
+### Isolation Strategy
+- **Container Sandboxing**: All execution in isolated Docker containers
+- **Resource Limits**: Strict CPU, memory, disk, network constraints
+- **Network Isolation**: No external connectivity during validation
+- **Ephemeral Environments**: Complete cleanup after each validation
+
+### Monitoring & Auditing
+- **Real-time Monitoring**: Syscall, network, file access monitoring
+- **Audit Logging**: Complete validation activity logs
+- **Compliance**: SOC2, ISO27001 ready audit trails
+- **Incident Response**: Automated threat detection and response
+
+## 📈 Performance & Scalability
+
+### Horizontal Scaling
+- **Microservices Architecture**: Independent scaling of validation engines
+- **Queue-based Processing**: Redis/RabbitMQ for async task processing
+- **Container Orchestration**: Kubernetes deployment support
+- **Auto-scaling**: Dynamic worker scaling based on queue depth
+
+### Performance Optimization
+- **Parallel Execution**: Concurrent validation across engines
+- **Caching**: Redis-based caching for repeated validations
+- **Streaming**: Large codebase streaming and chunked processing
+- **Resource Pooling**: Efficient container and resource management
 
 ## 🚀 Deployment
 
 ### Docker Deployment
 
 ```bash
-# Build and start services
+# Start with Docker Compose
 docker-compose up -d
 
 # Scale validation workers
-docker-compose up -d --scale validation-worker=3
+docker-compose up -d --scale validation-worker=5
 
-# View logs
-docker-compose logs -f validation-platform
+# Check status
+docker-compose ps
+```
+
+### Kubernetes Deployment
+
+```bash
+# Deploy to Kubernetes
+kubectl apply -f k8s/
+
+# Scale components
+kubectl scale deployment kwality-orchestrator --replicas=3
+kubectl scale deployment kwality-runtime-validator --replicas=10
 ```
 
 ### Production Configuration
 
-```bash
-# Production environment setup
-NODE_ENV=production
-LOG_LEVEL=info
-ENABLE_METRICS=true
-ENABLE_TRACING=true
+```yaml
+# production.yaml
+server:
+  port: 8080
+  host: "0.0.0.0"
+  
+orchestrator:
+  max_workers: 20
+  queue_size: 1000
+  
+database:
+  host: "postgres.kwality.svc.cluster.local"
+  max_conns: 50
+  
+redis:
+  host: "redis.kwality.svc.cluster.local"
+  pool_size: 20
+```
 
-# Security configuration
-ENABLE_AUTH=true
-JWT_SECRET=your_secure_jwt_secret
-CORS_ORIGIN=https://your-domain.com
+## 🔌 API Reference
 
-# Performance tuning
-MAX_CONCURRENT_TESTS=10
-WORKER_POOL_SIZE=4
-CACHE_TTL=3600
+### Core Endpoints
+
+```http
+# Submit codebase for validation
+POST /api/v1/validate/codebase
+Content-Type: application/json
+
+{
+  "name": "ai-service",
+  "source": {
+    "type": "git",
+    "repository": {
+      "url": "https://github.com/example/ai-service.git",
+      "branch": "main"
+    }
+  },
+  "config": {
+    "enabled_engines": ["static", "runtime", "security"],
+    "timeout": "10m"
+  }
+}
+
+# Get validation results
+GET /api/v1/validate/{task-id}
+
+# List validation tasks
+GET /api/v1/tasks?status=completed&limit=50
+
+# Get system health
+GET /api/v1/health
+```
+
+### Response Format
+
+```json
+{
+  "validation_id": "uuid",
+  "status": "completed",
+  "overall_score": 87.5,
+  "quality_gate": true,
+  "started_at": "2024-01-15T10:00:00Z",
+  "completed_at": "2024-01-15T10:05:30Z",
+  "duration": "5m30s",
+  "engine_results": {
+    "static_analysis": {
+      "score": 92.0,
+      "findings": [...],
+      "metrics": {...}
+    },
+    "runtime_validation": {
+      "score": 85.0,
+      "findings": [...],
+      "performance_metrics": {...}
+    },
+    "security_scanning": {
+      "score": 95.0,
+      "vulnerabilities": [...],
+      "secrets": []
+    }
+  },
+  "summary": {
+    "total_files": 45,
+    "lines_of_code": 3247,
+    "languages": ["go", "javascript"],
+    "recommendations": [...]
+  }
+}
 ```
 
 ## 🤝 Contributing
@@ -332,75 +404,72 @@ CACHE_TTL=3600
 ### Development Setup
 
 ```bash
-# Install development dependencies
-npm install --include=dev
+# Setup development environment
+git clone https://github.com/KooshaPari/kwality.git
+cd kwality
 
-# Install pre-commit hooks
-npm run prepare
+# Install Go dependencies
+go mod download
 
-# Run linting and formatting
-npm run lint
-npm run format
+# Install Rust dependencies
+cd engines/runtime-validator
+cargo build
+cd ../..
 
-# Run type checking
-npm run typecheck
+# Run tests
+make test
+
+# Start development server
+make dev
 ```
 
-### Coding Standards
-
-- **JavaScript/Node.js**: ES6+ with async/await patterns
-- **Python**: PEP 8 compliance with type hints
+### Code Standards
+- **Go**: Follow standard Go conventions, use gofmt, golangci-lint
+- **Rust**: Follow Rust conventions, use clippy, rustfmt
 - **Testing**: Comprehensive test coverage (>80%)
-- **Documentation**: JSDoc for APIs, README for components
+- **Documentation**: Clear API documentation and code comments
 
-### Pull Request Process
+## 📚 Documentation
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- **[Architecture Guide](docs/architecture.md)**: Detailed system architecture
+- **[API Documentation](docs/api.md)**: Complete API reference
+- **[Deployment Guide](docs/deployment.md)**: Production deployment instructions
+- **[Security Guide](docs/security.md)**: Security considerations and best practices
+- **[Contributing Guide](CONTRIBUTING.md)**: How to contribute to Kwality
 
-## 📈 Roadmap
+## 🗺️ Roadmap
 
-### Current Version (v1.0.0)
-- ✅ Core validation frameworks
-- ✅ Claude-Flow orchestration
-- ✅ Comprehensive testing suite
-- ✅ Basic monitoring and observability
+### Current Version (v1.0)
+- ✅ Multi-language static analysis
+- ✅ Containerized runtime validation
+- ✅ Security vulnerability scanning
+- ✅ REST API and orchestration
 
-### Upcoming Features (v1.1.0)
-- 🔄 Advanced ML model validation
-- 🔄 Distributed testing infrastructure
-- 🔄 Enhanced security and compliance
-- 🔄 GraphQL API interface
+### Next Release (v1.1)
+- 🔄 Advanced ML-based pattern detection
+- 🔄 Custom validation rule engine
+- 🔄 CI/CD pipeline integrations
+- 🔄 Advanced performance profiling
 
-### Future Enhancements (v2.0.0)
-- 📅 Multi-model comparison frameworks
-- 📅 Automated bias detection and mitigation
+### Future (v2.0)
+- 📅 Multi-model validation comparison
+- 📅 Automated fix suggestions
 - 📅 Real-time validation pipelines
-- 📅 Enterprise SSO integration
+- 📅 Enterprise SSO and RBAC
 
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **DeepEval**: Advanced LLM evaluation framework
-- **Playwright**: Modern web automation
-- **OpenTelemetry**: Observability standards
-- **Neo4j**: Graph database technology
-- **Burr**: State machine framework
-- **Claude by Anthropic**: LLM capabilities
-
-## 📞 Support
-
-- **Documentation**: [Wiki](https://github.com/your-org/kwality/wiki)
-- **Issues**: [GitHub Issues](https://github.com/your-org/kwality/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/kwality/discussions)
-- **Community**: [Discord Server](https://discord.gg/kwality)
+- **Static Analysis**: SonarQube, Semgrep, language-specific linters
+- **Runtime Safety**: Docker, containerd security research
+- **Performance**: Criterion (Rust), pprof (Go) benchmarking frameworks
+- **Security**: OWASP tools, CVE databases, security research community
 
 ---
 
-**Built with ❤️ for the LLM validation community**
+**🤖 Built for the age of AI-generated code - ensuring quality, security, and reliability** 
+
+*Kwality: Because AI-generated code deserves comprehensive validation*
