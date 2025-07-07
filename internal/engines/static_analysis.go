@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"kwality/internal/models"
-	"kwality/internal/orchestrator"
+	"kwality/internal/types"
 	"kwality/pkg/logger"
 )
 
@@ -215,17 +215,17 @@ func NewStaticAnalysisEngine(config StaticAnalysisConfig) (*StaticAnalysisEngine
 }
 
 // Validate performs static analysis validation
-func (e *StaticAnalysisEngine) Validate(ctx context.Context, codebase *models.Codebase, config *orchestrator.ValidationConfig) (*orchestrator.EngineResult, error) {
+func (e *StaticAnalysisEngine) Validate(ctx context.Context, codebase *models.Codebase, config *types.ValidationConfig) (*types.EngineResult, error) {
 	startTime := time.Now()
 	
 	e.logger.Info("Starting static analysis validation", 
 		"codebase_id", codebase.ID,
 		"total_files", len(codebase.Files))
 
-	result := &orchestrator.EngineResult{
+	result := &types.EngineResult{
 		EngineName: "static_analysis",
 		Status:     "running",
-		Findings:   []orchestrator.Finding{},
+		Findings:   []types.Finding{},
 		Metrics:    make(map[string]interface{}),
 	}
 
@@ -247,7 +247,7 @@ func (e *StaticAnalysisEngine) Validate(ctx context.Context, codebase *models.Co
 
 	// Convert lint results to findings
 	for _, lintResult := range lintResults {
-		finding := orchestrator.Finding{
+		finding := types.Finding{
 			ID:          fmt.Sprintf("lint_%s_%d", lintResult.File, lintResult.Line),
 			Type:        "code_quality",
 			Severity:    lintResult.Severity,
@@ -277,7 +277,7 @@ func (e *StaticAnalysisEngine) Validate(ctx context.Context, codebase *models.Co
 
 		// Convert analysis issues to findings
 		for _, issue := range analysisResult.Issues {
-			finding := orchestrator.Finding{
+			finding := types.Finding{
 				ID:          issue.ID,
 				Type:        issue.Type,
 				Severity:    issue.Severity,
@@ -307,6 +307,43 @@ func (e *StaticAnalysisEngine) Validate(ctx context.Context, codebase *models.Co
 		"duration", result.Duration)
 
 	return result, nil
+}
+
+// Name returns the engine name
+func (e *StaticAnalysisEngine) Name() string {
+	return "static_analysis"
+}
+
+// Version returns the engine version
+func (e *StaticAnalysisEngine) Version() string {
+	return "1.0.0"
+}
+
+// SupportedLanguages returns the languages supported by this engine
+func (e *StaticAnalysisEngine) SupportedLanguages() []string {
+	return []string{"go", "javascript", "typescript", "python", "rust", "java", "cpp", "c", "csharp"}
+}
+
+// HealthCheck verifies the engine is healthy and ready
+func (e *StaticAnalysisEngine) HealthCheck(ctx context.Context) error {
+	// Check if required tools are available
+	for _, linterName := range e.config.EnabledLinters {
+		switch linterName {
+		case "golangci-lint":
+			if _, err := exec.LookPath("golangci-lint"); err != nil {
+				return fmt.Errorf("golangci-lint not found: %w", err)
+			}
+		case "eslint":
+			if _, err := exec.LookPath("eslint"); err != nil {
+				return fmt.Errorf("eslint not found: %w", err)
+			}
+		case "pylint":
+			if _, err := exec.LookPath("pylint"); err != nil {
+				return fmt.Errorf("pylint not found: %w", err)
+			}
+		}
+	}
+	return nil
 }
 
 // initializeLinters initializes available linters
@@ -466,7 +503,7 @@ func (e *StaticAnalysisEngine) runAnalysis(ctx context.Context, codebase *models
 }
 
 // calculateScore calculates the overall static analysis score
-func (e *StaticAnalysisEngine) calculateScore(findings []orchestrator.Finding, analysis *AnalysisResult) float64 {
+func (e *StaticAnalysisEngine) calculateScore(findings []types.Finding, analysis *AnalysisResult) float64 {
 	baseScore := 100.0
 	
 	// Deduct points for findings based on severity

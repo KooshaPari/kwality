@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"kwality/pkg/logger"
 	"kwality/internal/models"
+	"kwality/internal/types"
 	"kwality/internal/engines"
 )
 
@@ -40,7 +40,7 @@ type ValidationTask struct {
 	ID          string                 `json:"id"`
 	Type        ValidationTaskType     `json:"type"`
 	Codebase    *models.Codebase       `json:"codebase"`
-	Config      *ValidationConfig      `json:"config"`
+	Config      *types.ValidationConfig `json:"config"`
 	CreatedAt   time.Time              `json:"created_at"`
 	StartedAt   *time.Time             `json:"started_at,omitempty"`
 	CompletedAt *time.Time             `json:"completed_at,omitempty"`
@@ -84,53 +84,6 @@ const (
 	PriorityCritical
 )
 
-// ValidationConfig holds validation-specific configuration
-type ValidationConfig struct {
-	EnabledEngines    []string               `json:"enabled_engines"`
-	StaticAnalysis    *StaticAnalysisConfig  `json:"static_analysis,omitempty"`
-	RuntimeValidation *RuntimeValidationConfig `json:"runtime_validation,omitempty"`
-	SecurityScanning  *SecurityScanningConfig `json:"security_scanning,omitempty"`
-	Timeout           time.Duration          `json:"timeout"`
-	Parallel          bool                   `json:"parallel"`
-	CustomRules       []CustomRule           `json:"custom_rules,omitempty"`
-}
-
-// StaticAnalysisConfig holds static analysis configuration
-type StaticAnalysisConfig struct {
-	Linters     []string `json:"linters"`
-	MaxFileSize int64    `json:"max_file_size"`
-	MaxFiles    int      `json:"max_files"`
-	Recursive   bool     `json:"recursive"`
-}
-
-// RuntimeValidationConfig holds runtime validation configuration
-type RuntimeValidationConfig struct {
-	TimeoutSeconds   int     `json:"timeout_seconds"`
-	MemoryLimitMB    int     `json:"memory_limit_mb"`
-	CPULimitCores    float64 `json:"cpu_limit_cores"`
-	NetworkIsolation bool    `json:"network_isolation"`
-	Environment      map[string]string `json:"environment,omitempty"`
-}
-
-// SecurityScanningConfig holds security scanning configuration
-type SecurityScanningConfig struct {
-	Scanners           []string `json:"scanners"`
-	VulnerabilityDBs   []string `json:"vulnerability_dbs"`
-	SecretsDetection   bool     `json:"secrets_detection"`
-	DependencyScanning bool     `json:"dependency_scanning"`
-	ComplianceChecks   []string `json:"compliance_checks,omitempty"`
-}
-
-// CustomRule represents a custom validation rule
-type CustomRule struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	Language    string                 `json:"language"`
-	Pattern     string                 `json:"pattern"`
-	Severity    string                 `json:"severity"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-}
 
 // ValidationResult holds the complete validation results
 type ValidationResult struct {
@@ -141,39 +94,12 @@ type ValidationResult struct {
 	StartedAt     time.Time                     `json:"started_at"`
 	CompletedAt   *time.Time                    `json:"completed_at,omitempty"`
 	Duration      time.Duration                 `json:"duration"`
-	EngineResults map[string]*EngineResult      `json:"engine_results"`
+	EngineResults map[string]*types.EngineResult `json:"engine_results"`
 	Summary       *ValidationSummary            `json:"summary"`
 	Errors        []ValidationError             `json:"errors,omitempty"`
 	Metadata      map[string]interface{}        `json:"metadata,omitempty"`
 }
 
-// EngineResult holds results from a specific validation engine
-type EngineResult struct {
-	EngineName   string                 `json:"engine_name"`
-	Status       string                 `json:"status"`
-	Score        float64                `json:"score"`
-	Findings     []Finding              `json:"findings"`
-	Metrics      map[string]interface{} `json:"metrics"`
-	Duration     time.Duration          `json:"duration"`
-	Error        string                 `json:"error,omitempty"`
-}
-
-// Finding represents a validation finding
-type Finding struct {
-	ID          string                 `json:"id"`
-	Type        string                 `json:"type"`
-	Severity    string                 `json:"severity"`
-	Title       string                 `json:"title"`
-	Description string                 `json:"description"`
-	File        string                 `json:"file,omitempty"`
-	Line        int                    `json:"line,omitempty"`
-	Column      int                    `json:"column,omitempty"`
-	Rule        string                 `json:"rule,omitempty"`
-	Category    string                 `json:"category"`
-	Confidence  float64                `json:"confidence"`
-	References  []string               `json:"references,omitempty"`
-	Metadata    map[string]interface{} `json:"metadata,omitempty"`
-}
 
 // ValidationSummary provides high-level validation summary
 type ValidationSummary struct {
@@ -335,7 +261,7 @@ func (o *Orchestrator) Stop(ctx context.Context) error {
 }
 
 // SubmitValidation submits a new validation task
-func (o *Orchestrator) SubmitValidation(codebase *models.Codebase, config *ValidationConfig) (*ValidationTask, error) {
+func (o *Orchestrator) SubmitValidation(codebase *models.Codebase, config *types.ValidationConfig) (*ValidationTask, error) {
 	o.runningMu.RLock()
 	if !o.running {
 		o.runningMu.RUnlock()
@@ -424,7 +350,7 @@ func (o *Orchestrator) GetHealthStatus() map[string]interface{} {
 
 	if !running {
 		status["status"] = "stopped"
-	} else if len(o.taskQueue) > cap(o.taskQueue)*0.8 {
+	} else if float64(len(o.taskQueue)) > float64(cap(o.taskQueue))*0.8 {
 		status["status"] = "degraded"
 	}
 
@@ -484,7 +410,7 @@ func (w *Worker) processTask(ctx context.Context, task *ValidationTask) {
 		TaskID:        task.ID,
 		Status:        TaskStatusRunning,
 		StartedAt:     startTime,
-		EngineResults: make(map[string]*EngineResult),
+		EngineResults: make(map[string]*types.EngineResult),
 		Metadata:      make(map[string]interface{}),
 	}
 

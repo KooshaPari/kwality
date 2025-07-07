@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"kwality/internal/models"
-	"kwality/internal/orchestrator"
+	"kwality/internal/types"
 )
 
 // ValidationEngine defines the interface for validation engines
 type ValidationEngine interface {
 	// Validate performs validation on the given codebase
-	Validate(ctx context.Context, codebase *models.Codebase, config *orchestrator.ValidationConfig) (*orchestrator.EngineResult, error)
+	Validate(ctx context.Context, codebase *models.Codebase, config *types.ValidationConfig) (*types.EngineResult, error)
 	
 	// Name returns the engine name
 	Name() string
