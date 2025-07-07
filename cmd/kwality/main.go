@@ -1,17 +1,10 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
+	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"kwality/internal/config"
-	"kwality/internal/orchestrator"
+	"kwality/internal/database"
 	"kwality/internal/server"
 	"kwality/pkg/logger"
 )
@@ -28,101 +21,97 @@ func main() {
 		Format: logger.JSONFormat,
 	})
 
-	log.Info("Starting Kwality - AI Codebase Validation Platform",
-		"version", appVersion,
-		"build_time", time.Now().Format(time.RFC3339))
+	log.Info("Starting Kwality LLM Validation Platform",
+		"version", appVersion)
 
-	// Load configuration
-	cfg, err := config.Load()
+	// Load configuration from environment variables
+	config := loadConfigFromEnv()
+
+	// Initialize database manager
+	dbConfig := database.Config{
+		PostgreSQL: database.PostgreSQLConfig{
+			Host:               getEnv("DB_HOST", "localhost"),
+			Port:               getEnvAsInt("DB_PORT", 5432),
+			Database:           getEnv("DB_NAME", "kwality"),
+			User:               getEnv("DB_USER", "postgres"),
+			Password:           getEnv("DB_PASSWORD", "postgres"),
+			MaxConnections:     getEnvAsInt("DB_MAX_CONNECTIONS", 20),
+			MaxIdleConnections: getEnvAsInt("DB_MAX_IDLE_CONNECTIONS", 5),
+			ConnMaxLifetime:    getEnv("DB_CONN_MAX_LIFETIME", "1h"),
+			SSLMode:            getEnv("DB_SSL_MODE", "disable"),
+		},
+		Redis: database.RedisConfig{
+			Host:        getEnv("REDIS_HOST", "localhost"),
+			Port:        getEnvAsInt("REDIS_PORT", 6379),
+			Password:    getEnv("REDIS_PASSWORD", ""),
+			DB:          getEnvAsInt("REDIS_DB", 0),
+			PoolSize:    getEnvAsInt("REDIS_POOL_SIZE", 10),
+			IdleTimeout: getEnv("REDIS_IDLE_TIMEOUT", "5m"),
+		},
+		Neo4j: database.Neo4jConfig{
+			URI:      getEnv("NEO4J_URI", "bolt://localhost:7687"),
+			User:     getEnv("NEO4J_USER", "neo4j"),
+			Password: getEnv("NEO4J_PASSWORD", "password"),
+			Database: getEnv("NEO4J_DATABASE", "neo4j"),
+		},
+	}
+
+	dbManager, err := database.NewManager(log, dbConfig)
 	if err != nil {
-		log.Fatal("Failed to load configuration", "error", err)
+		log.Error("Failed to initialize database manager", "error", err)
+		os.Exit(1)
 	}
-
-	log.Info("Configuration loaded",
-		"environment", cfg.Environment,
-		"port", cfg.Server.Port,
-		"log_level", cfg.Logging.Level)
-
-	// Initialize orchestrator
-	orch, err := orchestrator.New(orchestrator.Config{
-		Logger:        log,
-		MaxWorkers:    cfg.Orchestrator.MaxWorkers,
-		QueueSize:     cfg.Orchestrator.QueueSize,
-		ResultStorage: cfg.Orchestrator.ResultStorage,
-	})
-	if err != nil {
-		log.Fatal("Failed to initialize orchestrator", "error", err)
-	}
-
-	// Start orchestrator
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if err := orch.Start(ctx); err != nil {
-		log.Fatal("Failed to start orchestrator", "error", err)
-	}
-	log.Info("Orchestrator started successfully")
-
-	// Initialize HTTP server
-	if cfg.Environment == "production" {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
-	router := gin.New()
-	router.Use(gin.Recovery())
-
-	// Initialize server with all components
-	srv, err := server.New(server.Config{
-		Logger:       log,
-		Orchestrator: orch,
-		Router:       router,
-		Config:       cfg,
-	})
-	if err != nil {
-		log.Fatal("Failed to initialize server", "error", err)
-	}
-
-	// Setup routes
-	srv.SetupRoutes()
-
-	// Create HTTP server
-	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Server.Port),
-		Handler:      router,
-		ReadTimeout:  cfg.Server.ReadTimeout,
-		WriteTimeout: cfg.Server.WriteTimeout,
-		IdleTimeout:  cfg.Server.IdleTimeout,
-	}
-
-	// Start server in goroutine
-	go func() {
-		log.Info("Starting HTTP server", "port", cfg.Server.Port)
-		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("HTTP server failed", "error", err)
+	defer func() {
+		if err := dbManager.Close(); err != nil {
+			log.Error("Failed to close database connections", "error", err)
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Info("Shutting down Kwality...")
-
-	// Graceful shutdown with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
-
-	// Shutdown HTTP server
-	if err := httpServer.Shutdown(shutdownCtx); err != nil {
-		log.Error("HTTP server forced to shutdown", "error", err)
+	// Initialize and start server
+	srv, err := server.NewServer(log, dbManager, config)
+	if err != nil {
+		log.Error("Failed to create server", "error", err)
+		os.Exit(1)
 	}
 
-	// Shutdown orchestrator
-	cancel() // Cancel the orchestrator context
-	if err := orch.Stop(shutdownCtx); err != nil {
-		log.Error("Orchestrator forced to shutdown", "error", err)
+	// Start server (blocks until shutdown)
+	if err := srv.Start(); err != nil {
+		log.Error("Server failed to start", "error", err)
+		os.Exit(1)
 	}
+}
 
-	log.Info("Kwality shutdown completed")
+// loadConfigFromEnv loads server configuration from environment variables
+func loadConfigFromEnv() *server.Config {
+	return &server.Config{
+		Port:               getEnvAsInt("PORT", 3000),
+		Environment:        getEnv("ENVIRONMENT", "development"),
+		AllowedOrigins:     []string{getEnv("ALLOWED_ORIGINS", "*")},
+		JWTSecret:          getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
+		RateLimitRPS:       getEnvAsInt("RATE_LIMIT_RPS", 100),
+		RateLimitBurst:     getEnvAsInt("RATE_LIMIT_BURST", 200),
+		AuthRateLimitRPS:   getEnvAsInt("AUTH_RATE_LIMIT_RPS", 5),
+		AuthRateLimitBurst: getEnvAsInt("AUTH_RATE_LIMIT_BURST", 10),
+		ReadTimeout:        getEnvAsInt("READ_TIMEOUT", 30),
+		WriteTimeout:       getEnvAsInt("WRITE_TIMEOUT", 30),
+		IdleTimeout:        getEnvAsInt("IDLE_TIMEOUT", 120),
+	}
+}
+
+// getEnv gets environment variable with default value
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+// getEnvAsInt gets environment variable as integer with default value
+func getEnvAsInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		if intValue, err := strconv.Atoi(value); err == nil {
+			return intValue
+		}
+	}
+	return defaultValue
 }

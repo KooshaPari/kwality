@@ -53,9 +53,10 @@ deps: ## Download and update dependencies
 build: build-go build-rust ## Build all components
 
 .PHONY: build-go
-build-go: ## Build Go orchestrator
-	@echo "$(BLUE)Building Go orchestrator...$(NC)"
+build-go: ## Build Go applications
+	@echo "$(BLUE)Building Go applications...$(NC)"
 	CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=$(VERSION)" -o bin/kwality ./cmd/kwality
+	CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=$(VERSION)" -o bin/kwality-cli ./cmd/kwality-cli
 
 .PHONY: build-rust
 build-rust: ## Build Rust runtime validator
@@ -209,9 +210,14 @@ dev-logs: ## Show development environment logs
 	docker-compose -f docker-compose.kwality.yml logs -f
 
 .PHONY: run
-run: build-go ## Run the orchestrator locally
-	@echo "$(BLUE)Starting Kwality orchestrator...$(NC)"
+run: build-go ## Run the Kwality server locally
+	@echo "$(BLUE)Starting Kwality server...$(NC)"
 	./bin/kwality
+
+.PHONY: run-cli
+run-cli: build-go ## Run the Kwality CLI
+	@echo "$(BLUE)Running Kwality CLI...$(NC)"
+	./bin/kwality-cli
 
 .PHONY: run-validator
 run-validator: build-rust ## Run the runtime validator locally
