@@ -678,9 +678,7 @@ impl SecurityMonitor {
                 violation_type: ViolationType::FileSystemAccess,
                 severity: ViolationSeverity::High,
                 title: "Sensitive file access".to_string(),
-                description: format!(
-                    "Code attempted to access sensitive file: {sensitive_file}"
-                ),
+                description: format!("Code attempted to access sensitive file: {sensitive_file}"),
                 timestamp: chrono::Utc::now(),
                 location: Some(sensitive_file.clone()),
                 evidence: HashMap::new(),

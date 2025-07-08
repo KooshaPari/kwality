@@ -88,8 +88,7 @@ pub struct InterestingInput {
 }
 
 /// Code coverage information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CoverageInfo {
     pub lines_covered: u32,
     pub total_lines: u32,
@@ -758,7 +757,6 @@ impl CrashDetector {
         }))
     }
 }
-
 
 impl Default for FuzzingResult {
     fn default() -> Self {

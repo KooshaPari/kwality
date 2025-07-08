@@ -10,9 +10,7 @@ use bollard::container::{
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
-use bollard::models::{
-    ContainerCreateResponse, HostConfig, Mount, MountTypeEnum,
-};
+use bollard::models::{ContainerCreateResponse, HostConfig, Mount, MountTypeEnum};
 use bollard::Docker;
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
