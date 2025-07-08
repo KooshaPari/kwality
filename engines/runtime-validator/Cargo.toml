@@ -38,7 +38,7 @@ proptest = "1.4"
 mockall = "0.12"
 
 [[bin]]
-name = "kwality-runtime"
+name = "runtime-validator"
 path = "src/main.rs"
 
 [lib]
