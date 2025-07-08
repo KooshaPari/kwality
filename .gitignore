@@ -239,3 +239,22 @@ Thumbs.db
 *.temp
 .tmp/
 .temp/
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/target/
+*.test
+coverage.out
+coverage.txt
+go.work*
+
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
