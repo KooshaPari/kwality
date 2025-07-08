@@ -1,5 +1,5 @@
 //! Metrics collection and aggregation for runtime validation
-//! 
+//!
 //! This module provides comprehensive metrics collection, aggregation, and analysis
 //! for monitoring validation performance and system health.
 
@@ -261,9 +261,15 @@ impl MetricsCollector {
     }
 
     /// Record validation completion
-    pub async fn record_validation(&self, duration: Duration, success: bool, quality_score: f64, engine_results: HashMap<String, EngineMetrics>) -> Result<()> {
+    pub async fn record_validation(
+        &self,
+        duration: Duration,
+        success: bool,
+        quality_score: f64,
+        engine_results: HashMap<String, EngineMetrics>,
+    ) -> Result<()> {
         let mut metrics = self.validation_metrics.write().await;
-        
+
         metrics.total_validations += 1;
         if success {
             metrics.successful_validations += 1;
@@ -272,9 +278,11 @@ impl MetricsCollector {
         }
 
         // Update average validation time
-        let total_time = metrics.avg_validation_time.as_millis() as f64 * (metrics.total_validations - 1) as f64;
+        let total_time =
+            metrics.avg_validation_time.as_millis() as f64 * (metrics.total_validations - 1) as f64;
         let new_total_time = total_time + duration.as_millis() as f64;
-        metrics.avg_validation_time = Duration::from_millis((new_total_time / metrics.total_validations as f64) as u64);
+        metrics.avg_validation_time =
+            Duration::from_millis((new_total_time / metrics.total_validations as f64) as u64);
 
         // Update throughput (simplified calculation)
         metrics.validation_throughput = metrics.successful_validations as f64 / 3600.0; // per hour
@@ -292,14 +300,23 @@ impl MetricsCollector {
             buffer.add_validation_time(duration.as_millis() as f64);
         }
 
-        debug!("Recorded validation: duration={:?}, success={}, score={:.1}", duration, success, quality_score);
+        debug!(
+            "Recorded validation: duration={:?}, success={}, score={:.1}",
+            duration, success, quality_score
+        );
         Ok(())
     }
 
     /// Record system performance metrics
-    pub async fn record_performance(&self, cpu_usage: f64, memory_usage: u64, disk_io: u64, network_io: u64) -> Result<()> {
+    pub async fn record_performance(
+        &self,
+        cpu_usage: f64,
+        memory_usage: u64,
+        disk_io: u64,
+        network_io: u64,
+    ) -> Result<()> {
         let mut metrics = self.performance_metrics.write().await;
-        
+
         metrics.cpu_usage_percent = cpu_usage;
         metrics.memory_usage_mb = memory_usage;
         metrics.memory_peak_mb = metrics.memory_peak_mb.max(memory_usage);
@@ -309,7 +326,7 @@ impl MetricsCollector {
         // Update resource utilization
         metrics.resource_utilization.cpu_cores_used = cpu_usage / 100.0 * num_cpus::get() as f64;
         metrics.resource_utilization.memory_efficiency = memory_usage as f64 / (8.0 * 1024.0); // Assume 8GB total
-        
+
         // Record time series data
         if let Ok(mut buffer) = self.time_series_buffer.lock() {
             buffer.add_cpu_usage(cpu_usage);
@@ -322,19 +339,23 @@ impl MetricsCollector {
     /// Record container metrics
     pub async fn record_container_event(&self, event: ContainerEvent) -> Result<()> {
         let mut metrics = self.performance_metrics.write().await;
-        
+
         match event {
             ContainerEvent::Created => {
                 metrics.container_metrics.containers_created += 1;
             }
             ContainerEvent::Destroyed { lifetime } => {
                 metrics.container_metrics.containers_destroyed += 1;
-                
+
                 // Update average lifetime
                 let total_containers = metrics.container_metrics.containers_destroyed;
-                let current_avg_ms = metrics.container_metrics.avg_container_lifetime.as_millis() as f64;
-                let new_avg_ms = (current_avg_ms * (total_containers - 1) as f64 + lifetime.as_millis() as f64) / total_containers as f64;
-                metrics.container_metrics.avg_container_lifetime = Duration::from_millis(new_avg_ms as u64);
+                let current_avg_ms =
+                    metrics.container_metrics.avg_container_lifetime.as_millis() as f64;
+                let new_avg_ms = (current_avg_ms * (total_containers - 1) as f64
+                    + lifetime.as_millis() as f64)
+                    / total_containers as f64;
+                metrics.container_metrics.avg_container_lifetime =
+                    Duration::from_millis(new_avg_ms as u64);
             }
             ContainerEvent::Failed => {
                 metrics.container_metrics.container_failures += 1;
@@ -348,10 +369,15 @@ impl MetricsCollector {
     }
 
     /// Record error event
-    pub fn record_error(&self, error_type: String, error_message: String, severity: ErrorSeverity) -> Result<()> {
+    pub fn record_error(
+        &self,
+        error_type: String,
+        error_message: String,
+        severity: ErrorSeverity,
+    ) -> Result<()> {
         if let Ok(mut metrics) = self.error_metrics.lock() {
             metrics.total_errors += 1;
-            
+
             // Update error type count
             let count = metrics.error_types.entry(error_type.clone()).or_insert(0);
             *count += 1;
@@ -364,7 +390,7 @@ impl MetricsCollector {
                 severity,
                 context: HashMap::new(),
             };
-            
+
             metrics.recent_errors.push_back(error_event);
             if metrics.recent_errors.len() > 100 {
                 metrics.recent_errors.pop_front();
@@ -383,13 +409,18 @@ impl MetricsCollector {
     }
 
     /// Update system status
-    pub async fn update_system_status(&self, active_workers: u32, queue_depth: u32, health: HealthStatus) -> Result<()> {
+    pub async fn update_system_status(
+        &self,
+        active_workers: u32,
+        queue_depth: u32,
+        health: HealthStatus,
+    ) -> Result<()> {
         let mut metrics = self.system_metrics.write().await;
-        
+
         metrics.active_workers = active_workers;
         metrics.queue_depth = queue_depth;
         metrics.health_status = health;
-        
+
         Ok(())
     }
 
@@ -404,7 +435,9 @@ impl MetricsCollector {
         let trends = self.analyze_trends().await?;
 
         // Generate alerts
-        let alerts = self.generate_alerts(&validation_metrics, &performance_metrics, &error_metrics).await?;
+        let alerts = self
+            .generate_alerts(&validation_metrics, &performance_metrics, &error_metrics)
+            .await?;
 
         Ok(MetricsSummary {
             validation_metrics,
@@ -421,73 +454,124 @@ impl MetricsCollector {
         let validation_metrics = self.validation_metrics.read().await;
         let performance_metrics = self.performance_metrics.read().await;
         let system_metrics = self.system_metrics.read().await;
-        
+
         let mut output = String::new();
-        
+
         // Validation metrics
-        output.push_str(&format!("# HELP kwality_validations_total Total number of validations performed\n"));
+        output.push_str(&format!(
+            "# HELP kwality_validations_total Total number of validations performed\n"
+        ));
         output.push_str(&format!("# TYPE kwality_validations_total counter\n"));
-        output.push_str(&format!("kwality_validations_total {}\n", validation_metrics.total_validations));
-        
-        output.push_str(&format!("# HELP kwality_validation_duration_seconds Average validation duration\n"));
-        output.push_str(&format!("# TYPE kwality_validation_duration_seconds gauge\n"));
-        output.push_str(&format!("kwality_validation_duration_seconds {:.3}\n", validation_metrics.avg_validation_time.as_secs_f64()));
-        
+        output.push_str(&format!(
+            "kwality_validations_total {}\n",
+            validation_metrics.total_validations
+        ));
+
+        output.push_str(&format!(
+            "# HELP kwality_validation_duration_seconds Average validation duration\n"
+        ));
+        output.push_str(&format!(
+            "# TYPE kwality_validation_duration_seconds gauge\n"
+        ));
+        output.push_str(&format!(
+            "kwality_validation_duration_seconds {:.3}\n",
+            validation_metrics.avg_validation_time.as_secs_f64()
+        ));
+
         // Performance metrics
-        output.push_str(&format!("# HELP kwality_cpu_usage_percent Current CPU usage percentage\n"));
+        output.push_str(&format!(
+            "# HELP kwality_cpu_usage_percent Current CPU usage percentage\n"
+        ));
         output.push_str(&format!("# TYPE kwality_cpu_usage_percent gauge\n"));
-        output.push_str(&format!("kwality_cpu_usage_percent {:.2}\n", performance_metrics.cpu_usage_percent));
-        
-        output.push_str(&format!("# HELP kwality_memory_usage_mb Current memory usage in MB\n"));
+        output.push_str(&format!(
+            "kwality_cpu_usage_percent {:.2}\n",
+            performance_metrics.cpu_usage_percent
+        ));
+
+        output.push_str(&format!(
+            "# HELP kwality_memory_usage_mb Current memory usage in MB\n"
+        ));
         output.push_str(&format!("# TYPE kwality_memory_usage_mb gauge\n"));
-        output.push_str(&format!("kwality_memory_usage_mb {}\n", performance_metrics.memory_usage_mb));
-        
+        output.push_str(&format!(
+            "kwality_memory_usage_mb {}\n",
+            performance_metrics.memory_usage_mb
+        ));
+
         // System metrics
-        output.push_str(&format!("# HELP kwality_active_workers Number of active worker processes\n"));
+        output.push_str(&format!(
+            "# HELP kwality_active_workers Number of active worker processes\n"
+        ));
         output.push_str(&format!("# TYPE kwality_active_workers gauge\n"));
-        output.push_str(&format!("kwality_active_workers {}\n", system_metrics.active_workers));
-        
+        output.push_str(&format!(
+            "kwality_active_workers {}\n",
+            system_metrics.active_workers
+        ));
+
         Ok(output)
     }
 
     /// Get real-time metrics for monitoring dashboard
     pub async fn get_realtime_metrics(&self) -> Result<HashMap<String, serde_json::Value>> {
         let mut metrics = HashMap::new();
-        
+
         let validation_metrics = self.validation_metrics.read().await;
         let performance_metrics = self.performance_metrics.read().await;
         let system_metrics = self.system_metrics.read().await;
-        
-        metrics.insert("total_validations".to_string(), 
-                      serde_json::Value::Number(validation_metrics.total_validations.into()));
-        metrics.insert("validation_throughput".to_string(), 
-                      serde_json::Value::Number(serde_json::Number::from_f64(validation_metrics.validation_throughput).unwrap()));
-        metrics.insert("cpu_usage".to_string(), 
-                      serde_json::Value::Number(serde_json::Number::from_f64(performance_metrics.cpu_usage_percent).unwrap()));
-        metrics.insert("memory_usage_mb".to_string(), 
-                      serde_json::Value::Number(performance_metrics.memory_usage_mb.into()));
-        metrics.insert("active_workers".to_string(), 
-                      serde_json::Value::Number(system_metrics.active_workers.into()));
-        metrics.insert("queue_depth".to_string(), 
-                      serde_json::Value::Number(system_metrics.queue_depth.into()));
-        
+
+        metrics.insert(
+            "total_validations".to_string(),
+            serde_json::Value::Number(validation_metrics.total_validations.into()),
+        );
+        metrics.insert(
+            "validation_throughput".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(validation_metrics.validation_throughput).unwrap(),
+            ),
+        );
+        metrics.insert(
+            "cpu_usage".to_string(),
+            serde_json::Value::Number(
+                serde_json::Number::from_f64(performance_metrics.cpu_usage_percent).unwrap(),
+            ),
+        );
+        metrics.insert(
+            "memory_usage_mb".to_string(),
+            serde_json::Value::Number(performance_metrics.memory_usage_mb.into()),
+        );
+        metrics.insert(
+            "active_workers".to_string(),
+            serde_json::Value::Number(system_metrics.active_workers.into()),
+        );
+        metrics.insert(
+            "queue_depth".to_string(),
+            serde_json::Value::Number(system_metrics.queue_depth.into()),
+        );
+
         Ok(metrics)
     }
 
     /// Update quality score distribution
     fn update_score_distribution(&self, distribution: &mut ScoreDistribution, score: f64) {
         // Simple moving average for mean
-        let total_scores = distribution.score_histogram.iter().map(|b| b.count).sum::<u64>() + 1;
-        distribution.mean_score = (distribution.mean_score * (total_scores - 1) as f64 + score) / total_scores as f64;
-        
+        let total_scores = distribution
+            .score_histogram
+            .iter()
+            .map(|b| b.count)
+            .sum::<u64>()
+            + 1;
+        distribution.mean_score =
+            (distribution.mean_score * (total_scores - 1) as f64 + score) / total_scores as f64;
+
         // Add to histogram
         let bucket_index = ((score / 10.0).floor() as usize).min(9);
         if distribution.score_histogram.len() != 10 {
-            distribution.score_histogram = (0..10).map(|i| ScoreBucket {
-                range_start: i as f64 * 10.0,
-                range_end: (i + 1) as f64 * 10.0,
-                count: 0,
-            }).collect();
+            distribution.score_histogram = (0..10)
+                .map(|i| ScoreBucket {
+                    range_start: i as f64 * 10.0,
+                    range_end: (i + 1) as f64 * 10.0,
+                    count: 0,
+                })
+                .collect();
         }
         distribution.score_histogram[bucket_index].count += 1;
     }
@@ -504,9 +588,14 @@ impl MetricsCollector {
     }
 
     /// Generate metric alerts
-    async fn generate_alerts(&self, validation: &ValidationMetrics, performance: &PerformanceMetrics, errors: &ErrorMetrics) -> Result<Vec<MetricAlert>> {
+    async fn generate_alerts(
+        &self,
+        validation: &ValidationMetrics,
+        performance: &PerformanceMetrics,
+        errors: &ErrorMetrics,
+    ) -> Result<Vec<MetricAlert>> {
         let mut alerts = Vec::new();
-        
+
         // High error rate alert
         if errors.error_rate > 10.0 {
             alerts.push(MetricAlert {
@@ -518,7 +607,7 @@ impl MetricsCollector {
                 timestamp: SystemTime::now(),
             });
         }
-        
+
         // High CPU usage alert
         if performance.cpu_usage_percent > 90.0 {
             alerts.push(MetricAlert {
@@ -530,7 +619,7 @@ impl MetricsCollector {
                 timestamp: SystemTime::now(),
             });
         }
-        
+
         // Low throughput alert
         if validation.validation_throughput < 0.1 {
             alerts.push(MetricAlert {
@@ -542,7 +631,7 @@ impl MetricsCollector {
                 timestamp: SystemTime::now(),
             });
         }
-        
+
         Ok(alerts)
     }
 }
@@ -615,7 +704,7 @@ impl TimeSeriesBuffer {
             timestamp: SystemTime::now(),
             value,
         });
-        
+
         if series.len() > self.max_points {
             series.pop_front();
         }

@@ -1,5 +1,5 @@
 //! Container management for safe code execution
-//! 
+//!
 //! This module provides containerized execution of AI-generated code using Docker
 //! with strict resource limits, network isolation, and security monitoring.
 
@@ -10,7 +10,9 @@ use bollard::container::{
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
-use bollard::models::{ContainerCreateResponse, ContainerWaitResponse, HostConfig, Mount, MountTypeEnum};
+use bollard::models::{
+    ContainerCreateResponse, ContainerWaitResponse, HostConfig, Mount, MountTypeEnum,
+};
 use bollard::Docker;
 use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
@@ -82,10 +84,10 @@ impl ContainerManager {
     /// Create a new container manager
     pub async fn new(config: ContainerConfig) -> Result<Self> {
         info!("Initializing container manager");
-        
+
         // Connect to Docker daemon
-        let docker = Docker::connect_with_socket_defaults()
-            .context("Failed to connect to Docker daemon")?;
+        let docker =
+            Docker::connect_with_socket_defaults().context("Failed to connect to Docker daemon")?;
 
         // Verify Docker is accessible
         match docker.ping().await {
@@ -104,30 +106,38 @@ impl ContainerManager {
     }
 
     /// Create execution environment for a codebase
-    pub async fn create_execution_environment(&self, codebase: &Codebase) -> Result<ExecutionEnvironment> {
+    pub async fn create_execution_environment(
+        &self,
+        codebase: &Codebase,
+    ) -> Result<ExecutionEnvironment> {
         let env_id = Uuid::new_v4().to_string();
-        info!("Creating execution environment for codebase {}", codebase.id);
+        info!(
+            "Creating execution environment for codebase {}",
+            codebase.id
+        );
 
         // Create temporary directory
-        let temp_dir = TempDir::new()
-            .context("Failed to create temporary directory")?;
-        
+        let temp_dir = TempDir::new().context("Failed to create temporary directory")?;
+
         let working_dir = temp_dir.path().join("workspace");
-        fs::create_dir_all(&working_dir).await
+        fs::create_dir_all(&working_dir)
+            .await
             .context("Failed to create working directory")?;
 
         // Write codebase files to working directory
         for file in &codebase.files {
             let file_path = working_dir.join(&file.path);
-            
+
             // Create parent directories
             if let Some(parent) = file_path.parent() {
-                fs::create_dir_all(parent).await
+                fs::create_dir_all(parent)
+                    .await
                     .with_context(|| format!("Failed to create directory for {}", file.path))?;
             }
 
             // Write file content
-            fs::write(&file_path, &file.content).await
+            fs::write(&file_path, &file.content)
+                .await
                 .with_context(|| format!("Failed to write file {}", file.path))?;
 
             debug!("Written file: {}", file.path);
@@ -150,11 +160,13 @@ impl ContainerManager {
     pub async fn execute_code(&self, env: &ExecutionEnvironment) -> Result<ExecutionResult> {
         let execution_id = Uuid::new_v4().to_string();
         let start_time = Instant::now();
-        
+
         info!("Starting code execution in environment {}", env.id);
 
         // Create container
-        let container_id = self.create_container(env).await
+        let container_id = self
+            .create_container(env)
+            .await
             .context("Failed to create container")?;
 
         // Start container
@@ -178,8 +190,11 @@ impl ContainerManager {
 
         // Detect and execute based on codebase language/type
         let execution_command = self.detect_execution_command(&env.codebase)?;
-        
-        match self.execute_command_in_container(&container_id, &execution_command).await {
+
+        match self
+            .execute_command_in_container(&container_id, &execution_command)
+            .await
+        {
             Ok((exit_code, stdout, stderr)) => {
                 result.exit_code = exit_code;
                 result.stdout = stdout;
@@ -193,26 +208,33 @@ impl ContainerManager {
         }
 
         // Collect resource usage
-        result.resource_usage = self.collect_resource_usage(&container_id).await
+        result.resource_usage = self
+            .collect_resource_usage(&container_id)
+            .await
             .unwrap_or_else(|e| {
                 warn!("Failed to collect resource usage: {}", e);
                 ResourceUsage::default()
             });
 
         // Stop and remove container
-        let _ = self.docker
+        let _ = self
+            .docker
             .stop_container(&container_id, Some(StopContainerOptions { t: 10 }))
             .await;
 
-        let _ = self.docker
-            .remove_container(&container_id, Some(RemoveContainerOptions {
-                force: true,
-                ..Default::default()
-            }))
+        let _ = self
+            .docker
+            .remove_container(
+                &container_id,
+                Some(RemoveContainerOptions {
+                    force: true,
+                    ..Default::default()
+                }),
+            )
             .await;
 
         result.duration = start_time.elapsed();
-        
+
         info!(
             "Code execution completed: {} (exit: {}, duration: {:?})",
             execution_id, result.exit_code, result.duration
@@ -227,11 +249,15 @@ impl ContainerManager {
 
         // Remove container if it exists
         if let Some(container_id) = &env.container_id {
-            let _ = self.docker
-                .remove_container(container_id, Some(RemoveContainerOptions {
-                    force: true,
-                    ..Default::default()
-                }))
+            let _ = self
+                .docker
+                .remove_container(
+                    container_id,
+                    Some(RemoveContainerOptions {
+                        force: true,
+                        ..Default::default()
+                    }),
+                )
                 .await;
         }
 
@@ -247,33 +273,52 @@ impl ContainerManager {
         // Check Docker daemon
         match self.docker.ping().await {
             Ok(_) => {
-                status.insert("docker_daemon".to_string(), serde_json::Value::String("healthy".to_string()));
+                status.insert(
+                    "docker_daemon".to_string(),
+                    serde_json::Value::String("healthy".to_string()),
+                );
             }
             Err(e) => {
-                status.insert("docker_daemon".to_string(), serde_json::Value::String(format!("unhealthy: {}", e)));
+                status.insert(
+                    "docker_daemon".to_string(),
+                    serde_json::Value::String(format!("unhealthy: {}", e)),
+                );
             }
         }
 
         // Check runtime image availability
         match self.docker.inspect_image(&self.config.image).await {
             Ok(_) => {
-                status.insert("runtime_image".to_string(), serde_json::Value::String("available".to_string()));
+                status.insert(
+                    "runtime_image".to_string(),
+                    serde_json::Value::String("available".to_string()),
+                );
             }
             Err(_) => {
-                status.insert("runtime_image".to_string(), serde_json::Value::String("missing".to_string()));
+                status.insert(
+                    "runtime_image".to_string(),
+                    serde_json::Value::String("missing".to_string()),
+                );
             }
         }
 
         // System information
         match self.docker.info().await {
             Ok(info) => {
-                status.insert("containers_running".to_string(), 
-                    serde_json::Value::Number(info.containers_running.unwrap_or(0).into()));
-                status.insert("images_count".to_string(), 
-                    serde_json::Value::Number(info.images.unwrap_or(0).into()));
+                status.insert(
+                    "containers_running".to_string(),
+                    serde_json::Value::Number(info.containers_running.unwrap_or(0).into()),
+                );
+                status.insert(
+                    "images_count".to_string(),
+                    serde_json::Value::Number(info.images.unwrap_or(0).into()),
+                );
             }
             Err(_) => {
-                status.insert("system_info".to_string(), serde_json::Value::String("unavailable".to_string()));
+                status.insert(
+                    "system_info".to_string(),
+                    serde_json::Value::String("unavailable".to_string()),
+                );
             }
         }
 
@@ -290,7 +335,10 @@ impl ContainerManager {
                 return Ok(());
             }
             Err(_) => {
-                info!("Runtime image not found, attempting to pull: {}", self.config.image);
+                info!(
+                    "Runtime image not found, attempting to pull: {}",
+                    self.config.image
+                );
             }
         }
 
@@ -301,7 +349,7 @@ impl ContainerManager {
         });
 
         let mut stream = self.docker.create_image(options, None, None);
-        
+
         use futures_util::stream::StreamExt;
         while let Some(result) = stream.next().await {
             match result {
@@ -324,7 +372,7 @@ impl ContainerManager {
     /// Create container for execution
     async fn create_container(&self, env: &ExecutionEnvironment) -> Result<String> {
         let container_name = format!("kwality-exec-{}", env.id);
-        
+
         // Configure host mount for code access
         let mount = Mount {
             target: Some("/workspace".to_string()),
@@ -348,7 +396,10 @@ impl ContainerManager {
             security_opt: Some(self.config.security_opts.clone()),
             tmpfs: Some({
                 let mut tmpfs = HashMap::new();
-                tmpfs.insert("/tmp".to_string(), format!("size={}m", self.config.temp_dir_size_mb));
+                tmpfs.insert(
+                    "/tmp".to_string(),
+                    format!("size={}m", self.config.temp_dir_size_mb),
+                );
                 tmpfs
             }),
             ..Default::default()
@@ -358,10 +409,11 @@ impl ContainerManager {
             image: Some(self.config.image.clone()),
             working_dir: Some("/workspace".to_string()),
             env: Some(
-                self.config.environment
+                self.config
+                    .environment
                     .iter()
                     .map(|(k, v)| format!("{}={}", k, v))
-                    .collect()
+                    .collect(),
             ),
             host_config: Some(host_config),
             attach_stdout: Some(true),
@@ -374,7 +426,8 @@ impl ContainerManager {
             platform: None,
         };
 
-        let response: ContainerCreateResponse = self.docker
+        let response: ContainerCreateResponse = self
+            .docker
             .create_container(Some(options), config)
             .await
             .context("Failed to create container")?;
@@ -396,12 +449,14 @@ impl ContainerManager {
             ..Default::default()
         };
 
-        let exec = self.docker
+        let exec = self
+            .docker
             .create_exec(container_id, exec_config)
             .await
             .context("Failed to create exec")?;
 
-        let start_exec = self.docker
+        let start_exec = self
+            .docker
             .start_exec(&exec.id, None)
             .await
             .context("Failed to start exec")?;
@@ -425,7 +480,8 @@ impl ContainerManager {
         }
 
         // Get exit code
-        let exec_inspect = self.docker
+        let exec_inspect = self
+            .docker
             .inspect_exec(&exec.id)
             .await
             .context("Failed to inspect exec")?;
@@ -434,8 +490,12 @@ impl ContainerManager {
         let stdout_str = String::from_utf8_lossy(&stdout).to_string();
         let stderr_str = String::from_utf8_lossy(&stderr).to_string();
 
-        debug!("Command executed: exit={}, stdout_len={}, stderr_len={}", 
-               exit_code, stdout_str.len(), stderr_str.len());
+        debug!(
+            "Command executed: exit={}, stdout_len={}, stderr_len={}",
+            exit_code,
+            stdout_str.len(),
+            stderr_str.len()
+        );
 
         Ok((exit_code, stdout_str, stderr_str))
     }
@@ -454,7 +514,9 @@ impl ContainerManager {
                 p if p.ends_with(".go") => has_go = true,
                 p if p.ends_with(".rs") || p == "Cargo.toml" => has_rust = true,
                 p if p.ends_with(".py") => has_python = true,
-                p if p.ends_with(".js") || p.ends_with(".ts") || p == "package.json" => has_javascript = true,
+                p if p.ends_with(".js") || p.ends_with(".ts") || p == "package.json" => {
+                    has_javascript = true
+                }
                 p if p.ends_with(".java") => has_java = true,
                 _ => {}
             }
@@ -464,7 +526,11 @@ impl ContainerManager {
         if has_go {
             // Look for main.go or try to run as module
             if codebase.files.iter().any(|f| f.path == "main.go") {
-                Ok(vec!["go".to_string(), "run".to_string(), "main.go".to_string()])
+                Ok(vec![
+                    "go".to_string(),
+                    "run".to_string(),
+                    "main.go".to_string(),
+                ])
             } else {
                 Ok(vec!["go".to_string(), "run".to_string(), ".".to_string()])
             }
@@ -473,22 +539,33 @@ impl ContainerManager {
                 Ok(vec!["cargo".to_string(), "run".to_string()])
             } else {
                 // Single Rust file
-                let rust_file = codebase.files.iter()
+                let rust_file = codebase
+                    .files
+                    .iter()
                     .find(|f| f.path.ends_with(".rs"))
                     .map(|f| f.path.clone())
                     .unwrap_or_else(|| "main.rs".to_string());
-                Ok(vec!["rustc".to_string(), rust_file.clone(), "&&".to_string(), 
-                       format!("./{}", rust_file.replace(".rs", ""))])
+                Ok(vec![
+                    "rustc".to_string(),
+                    rust_file.clone(),
+                    "&&".to_string(),
+                    format!("./{}", rust_file.replace(".rs", "")),
+                ])
             }
         } else if has_python {
             // Look for main.py or __main__.py
-            if let Some(main_file) = codebase.files.iter()
+            if let Some(main_file) = codebase
+                .files
+                .iter()
                 .find(|f| f.path == "main.py" || f.path == "__main__.py")
-                .map(|f| f.path.clone()) {
+                .map(|f| f.path.clone())
+            {
                 Ok(vec!["python3".to_string(), main_file])
             } else {
                 // Run first Python file found
-                let py_file = codebase.files.iter()
+                let py_file = codebase
+                    .files
+                    .iter()
                     .find(|f| f.path.ends_with(".py"))
                     .map(|f| f.path.clone())
                     .unwrap_or_else(|| "main.py".to_string());
@@ -499,7 +576,9 @@ impl ContainerManager {
                 Ok(vec!["npm".to_string(), "start".to_string()])
             } else {
                 // Run first JS file found
-                let js_file = codebase.files.iter()
+                let js_file = codebase
+                    .files
+                    .iter()
                     .find(|f| f.path.ends_with(".js"))
                     .map(|f| f.path.clone())
                     .unwrap_or_else(|| "index.js".to_string());
@@ -507,29 +586,42 @@ impl ContainerManager {
             }
         } else if has_java {
             // Simple Java execution - would need more sophisticated detection in production
-            let java_file = codebase.files.iter()
+            let java_file = codebase
+                .files
+                .iter()
                 .find(|f| f.path.ends_with(".java"))
                 .map(|f| f.path.clone())
                 .unwrap_or_else(|| "Main.java".to_string());
-            
+
             let class_name = java_file.replace(".java", "");
             Ok(vec![
-                "javac".to_string(), java_file.clone(), "&&".to_string(),
-                "java".to_string(), class_name
+                "javac".to_string(),
+                java_file.clone(),
+                "&&".to_string(),
+                "java".to_string(),
+                class_name,
             ])
         } else {
             // Default: try to run as shell script
-            Ok(vec!["sh".to_string(), "-c".to_string(), "echo 'No runnable code detected'".to_string()])
+            Ok(vec![
+                "sh".to_string(),
+                "-c".to_string(),
+                "echo 'No runnable code detected'".to_string(),
+            ])
         }
     }
 
     /// Collect resource usage from container
     async fn collect_resource_usage(&self, container_id: &str) -> Result<ResourceUsage> {
-        let stats = self.docker
-            .stats(container_id, Some(bollard::container::StatsOptions {
-                stream: false,
-                one_shot: true,
-            }))
+        let stats = self
+            .docker
+            .stats(
+                container_id,
+                Some(bollard::container::StatsOptions {
+                    stream: false,
+                    one_shot: true,
+                }),
+            )
             .try_collect::<Vec<_>>()
             .await
             .context("Failed to collect container stats")?;
@@ -537,16 +629,16 @@ impl ContainerManager {
         if let Some(stat) = stats.first() {
             let memory_usage_mb = stat.memory_stats.usage.unwrap_or(0) / (1024 * 1024);
             let memory_limit_mb = stat.memory_stats.limit.unwrap_or(0) / (1024 * 1024);
-            
+
             // Calculate CPU usage percentage
             let cpu_usage_percent = {
                 let cpu_stats = &stat.cpu_stats;
                 let precpu_stats = &stat.precpu_stats;
-                let cpu_delta = cpu_stats.cpu_usage.total_usage as f64 - 
-                               precpu_stats.cpu_usage.total_usage as f64;
-                let system_delta = cpu_stats.system_cpu_usage.unwrap_or(0) as f64 - 
-                                  precpu_stats.system_cpu_usage.unwrap_or(0) as f64;
-                
+                let cpu_delta = cpu_stats.cpu_usage.total_usage as f64
+                    - precpu_stats.cpu_usage.total_usage as f64;
+                let system_delta = cpu_stats.system_cpu_usage.unwrap_or(0) as f64
+                    - precpu_stats.system_cpu_usage.unwrap_or(0) as f64;
+
                 if system_delta > 0.0 && cpu_delta > 0.0 {
                     (cpu_delta / system_delta) * cpu_stats.online_cpus.unwrap_or(1) as f64 * 100.0
                 } else {
@@ -558,7 +650,9 @@ impl ContainerManager {
                 cpu_usage_percent,
                 memory_usage_mb,
                 disk_usage_mb: 0, // Would need additional stats collection
-                network_io_bytes: stat.networks.as_ref()
+                network_io_bytes: stat
+                    .networks
+                    .as_ref()
                     .and_then(|nets| nets.values().next())
                     .map(|net| net.rx_bytes + net.tx_bytes)
                     .unwrap_or(0),

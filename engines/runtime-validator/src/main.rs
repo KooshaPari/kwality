@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Arg, Command};
-use kwality_runtime_validator::{RuntimeValidator, RuntimeConfig, Codebase};
+use kwality_runtime_validator::{Codebase, RuntimeConfig, RuntimeValidator};
 use serde_json;
 use std::fs;
 use std::path::PathBuf;
@@ -10,9 +10,7 @@ use tracing_subscriber;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     let matches = Command::new("kwality-runtime")
         .version(env!("CARGO_PKG_VERSION"))
@@ -92,7 +90,7 @@ async fn main() -> Result<()> {
     println!("⚡ Status: {:?}", result.status);
     println!("🔍 Findings: {}", result.findings.len());
     println!("💡 Recommendations: {}", result.recommendations.len());
-    
+
     if let Some(duration) = result.duration {
         println!("⏱️  Duration: {:.2}s", duration.as_secs_f64());
     }
@@ -100,7 +98,11 @@ async fn main() -> Result<()> {
     if !result.findings.is_empty() {
         println!("\n🚨 Key Findings:");
         for finding in result.findings.iter().take(5) {
-            println!("  • {} ({})", finding.title, format!("{:?}", finding.severity));
+            println!(
+                "  • {} ({})",
+                finding.title,
+                format!("{:?}", finding.severity)
+            );
         }
     }
 

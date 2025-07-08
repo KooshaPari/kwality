@@ -1,5 +1,5 @@
 //! Fuzzing engine for dynamic code validation
-//! 
+//!
 //! This module provides fuzzing capabilities to test code robustness by generating
 //! random inputs and monitoring program behavior under stress conditions.
 
@@ -11,8 +11,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
-use crate::{FuzzingConfig, FuzzingStrategy};
 use crate::container::ExecutionEnvironment;
+use crate::{FuzzingConfig, FuzzingStrategy};
 
 /// Fuzzing engine for generating test inputs and monitoring behavior
 #[derive(Debug)]
@@ -176,7 +176,10 @@ pub struct CrashPattern {
 impl FuzzingEngine {
     /// Create a new fuzzing engine
     pub fn new(config: FuzzingConfig) -> Result<Self> {
-        info!("Initializing fuzzing engine with strategy: {:?}", config.strategy);
+        info!(
+            "Initializing fuzzing engine with strategy: {:?}",
+            config.strategy
+        );
 
         let mut input_generators: Vec<Box<dyn InputGenerator>> = Vec::new();
 
@@ -210,7 +213,7 @@ impl FuzzingEngine {
     /// Run fuzzing campaign on the execution environment
     pub async fn fuzz_code(&self, env: &ExecutionEnvironment) -> Result<FuzzingResult> {
         info!("Starting fuzzing campaign for environment {}", env.id);
-        
+
         let start_time = Instant::now();
         let mut result = FuzzingResult {
             total_executions: 0,
@@ -233,14 +236,19 @@ impl FuzzingEngine {
 
             // Generate input
             let input = self.generate_test_input()?;
-            
+
             // Execute with input
             let execution_result = self.execute_with_input(env, &input).await?;
-            
+
             result.total_executions += 1;
 
             // Check for crashes
-            if let Some(crash) = self.crash_detector.lock().unwrap().analyze_execution(&execution_result)? {
+            if let Some(crash) = self
+                .crash_detector
+                .lock()
+                .unwrap()
+                .analyze_execution(&execution_result)?
+            {
                 result.crashes_found += 1;
                 if self.is_unique_crash(&crash, &result.crashes) {
                     result.unique_crashes += 1;
@@ -250,7 +258,11 @@ impl FuzzingEngine {
 
             // Update coverage if enabled
             if self.config.coverage_guided {
-                let coverage_change = self.coverage_tracker.lock().unwrap().update_coverage(&execution_result)?;
+                let coverage_change = self
+                    .coverage_tracker
+                    .lock()
+                    .unwrap()
+                    .update_coverage(&execution_result)?;
                 if coverage_change > 0.0 {
                     result.interesting_inputs.push(InterestingInput {
                         input_data: input.clone(),
@@ -258,7 +270,8 @@ impl FuzzingEngine {
                         coverage_increase: coverage_change,
                         execution_time: execution_result.execution_time,
                         memory_usage: execution_result.memory_usage,
-                        uniqueness_score: self.calculate_uniqueness_score(&input, &result.interesting_inputs),
+                        uniqueness_score: self
+                            .calculate_uniqueness_score(&input, &result.interesting_inputs),
                     });
                 }
             }
@@ -269,12 +282,20 @@ impl FuzzingEngine {
             }
 
             if i % 100 == 0 {
-                debug!("Fuzzing progress: {}/{} executions", i + 1, self.config.iterations);
+                debug!(
+                    "Fuzzing progress: {}/{} executions",
+                    i + 1,
+                    self.config.iterations
+                );
             }
         }
 
         result.execution_time = start_time.elapsed();
-        result.coverage_percentage = self.coverage_tracker.lock().unwrap().get_coverage_percentage();
+        result.coverage_percentage = self
+            .coverage_tracker
+            .lock()
+            .unwrap()
+            .get_coverage_percentage();
         result.coverage_info = self.coverage_tracker.lock().unwrap().get_coverage_info();
 
         info!(
@@ -299,11 +320,15 @@ impl FuzzingEngine {
     }
 
     /// Execute code with given input (simplified simulation)
-    async fn execute_with_input(&self, env: &ExecutionEnvironment, input: &str) -> Result<ExecutionResult> {
+    async fn execute_with_input(
+        &self,
+        env: &ExecutionEnvironment,
+        input: &str,
+    ) -> Result<ExecutionResult> {
         // Simplified execution result for demonstration
         // In a real implementation, this would execute the code with the input
         // and collect detailed execution information
-        
+
         let mut rng = rand::thread_rng();
         let execution_time = Duration::from_millis(rng.gen_range(1..100));
         let memory_usage = rng.gen_range(1024..10240);
@@ -315,15 +340,20 @@ impl FuzzingEngine {
             memory_usage,
             execution_path: format!("path-{}", rng.gen_range(1..100)),
             stdout: "".to_string(),
-            stderr: if exit_code != 0 { "segmentation fault".to_string() } else { "".to_string() },
+            stderr: if exit_code != 0 {
+                "segmentation fault".to_string()
+            } else {
+                "".to_string()
+            },
         })
     }
 
     /// Check if crash is unique compared to existing crashes
     fn is_unique_crash(&self, crash: &CrashReport, existing_crashes: &[CrashReport]) -> bool {
         !existing_crashes.iter().any(|existing| {
-            std::mem::discriminant(&crash.crash_type) == std::mem::discriminant(&existing.crash_type) &&
-            crash.crash_location == existing.crash_location
+            std::mem::discriminant(&crash.crash_type)
+                == std::mem::discriminant(&existing.crash_type)
+                && crash.crash_location == existing.crash_location
         })
     }
 
@@ -348,7 +378,7 @@ impl FuzzingEngine {
         // Simple Levenshtein distance normalized by length
         let distance = levenshtein::levenshtein(input1, input2) as f64;
         let max_len = input1.len().max(input2.len()) as f64;
-        
+
         if max_len == 0.0 {
             0.0
         } else {
@@ -357,7 +387,11 @@ impl FuzzingEngine {
     }
 
     /// Detect performance anomalies in execution
-    fn detect_performance_anomaly(&self, input: &str, execution: &ExecutionResult) -> Result<Option<PerformanceAnomaly>> {
+    fn detect_performance_anomaly(
+        &self,
+        input: &str,
+        execution: &ExecutionResult,
+    ) -> Result<Option<PerformanceAnomaly>> {
         // Simple performance anomaly detection
         if execution.execution_time > Duration::from_millis(1000) {
             return Ok(Some(PerformanceAnomaly {
@@ -370,7 +404,8 @@ impl FuzzingEngine {
             }));
         }
 
-        if execution.memory_usage > 50 * 1024 * 1024 { // 50MB
+        if execution.memory_usage > 50 * 1024 * 1024 {
+            // 50MB
             return Ok(Some(PerformanceAnomaly {
                 anomaly_type: PerformanceAnomalyType::MemoryLeak,
                 input_trigger: input.to_string(),
@@ -415,12 +450,12 @@ impl InputGenerator for RandomInputGenerator {
     fn mutate_input(&self, input: &str) -> Result<String> {
         let mut rng = rand::thread_rng();
         let mut bytes = input.as_bytes().to_vec();
-        
+
         if !bytes.is_empty() {
             let index = rng.gen_range(0..bytes.len());
             bytes[index] = rng.gen_range(0..255);
         }
-        
+
         Ok(String::from_utf8_lossy(&bytes).to_string())
     }
 
@@ -445,11 +480,11 @@ impl InputGenerator for StructuredInputGenerator {
     fn generate_input(&self) -> Result<String> {
         let mut rng = rand::thread_rng();
         let template = &self.templates[rng.gen_range(0..self.templates.len())];
-        
+
         // Simple template filling
         let value = rng.gen_range(1..1000);
         let result = template.replace("{}", &value.to_string());
-        
+
         Ok(result)
     }
 
@@ -457,9 +492,11 @@ impl InputGenerator for StructuredInputGenerator {
         // Simple mutation: replace numbers
         let mut rng = rand::thread_rng();
         let new_value = rng.gen_range(1..1000);
-        
+
         if let Ok(regex) = regex::Regex::new(r"\d+") {
-            Ok(regex.replace_all(input, new_value.to_string().as_str()).to_string())
+            Ok(regex
+                .replace_all(input, new_value.to_string().as_str())
+                .to_string())
         } else {
             Ok(input.to_string())
         }
@@ -474,14 +511,20 @@ impl GrammarInputGenerator {
     fn new() -> Result<Self> {
         let mut grammar_rules = HashMap::new();
         grammar_rules.insert("start".to_string(), vec!["expr".to_string()]);
-        grammar_rules.insert("expr".to_string(), vec![
+        grammar_rules.insert(
+            "expr".to_string(),
+            vec![
+                "num".to_string(),
+                "expr + expr".to_string(),
+                "expr - expr".to_string(),
+                "(expr)".to_string(),
+            ],
+        );
+        grammar_rules.insert(
             "num".to_string(),
-            "expr + expr".to_string(),
-            "expr - expr".to_string(),
-            "(expr)".to_string(),
-        ]);
-        grammar_rules.insert("num".to_string(), vec!["1".to_string(), "2".to_string(), "3".to_string()]);
-        
+            vec!["1".to_string(), "2".to_string(), "3".to_string()],
+        );
+
         Ok(Self { grammar_rules })
     }
 }
@@ -510,7 +553,7 @@ impl GrammarInputGenerator {
         if let Some(productions) = self.grammar_rules.get(symbol) {
             let mut rng = rand::thread_rng();
             let production = &productions[rng.gen_range(0..productions.len())];
-            
+
             // Simple expansion
             if production.contains(' ') {
                 let parts: Vec<&str> = production.split(' ').collect();
@@ -556,7 +599,7 @@ impl InputGenerator for MutationInputGenerator {
     fn mutate_input(&self, input: &str) -> Result<String> {
         let mut rng = rand::thread_rng();
         let mut bytes = input.as_bytes().to_vec();
-        
+
         if bytes.is_empty() {
             return Ok(input.to_string());
         }
@@ -588,7 +631,7 @@ impl InputGenerator for MutationInputGenerator {
             }
             _ => {}
         }
-        
+
         Ok(String::from_utf8_lossy(&bytes).to_string())
     }
 
@@ -608,7 +651,7 @@ impl CoverageTracker {
     fn update_coverage(&mut self, execution: &ExecutionResult) -> Result<f64> {
         let path = &execution.execution_path;
         let current_count = self.coverage_map.get(path).unwrap_or(&0);
-        
+
         if *current_count == 0 {
             self.coverage_map.insert(path.clone(), 1);
             self.total_coverage += 1.0;
@@ -633,7 +676,11 @@ impl CoverageTracker {
             total_functions: 20, // Simplified
             branches_covered: (self.coverage_map.len() / 2) as u32,
             total_branches: 50, // Simplified
-            coverage_map: self.coverage_map.iter().map(|(k, v)| (k.clone(), *v)).collect(),
+            coverage_map: self
+                .coverage_map
+                .iter()
+                .map(|(k, v)| (k.clone(), *v))
+                .collect(),
         }
     }
 }

@@ -1,5 +1,5 @@
 //! Validation orchestration and result aggregation
-//! 
+//!
 //! This module provides the core validation orchestration logic, coordinating
 //! between different validation engines and aggregating results.
 
@@ -14,11 +14,13 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::container::{ContainerManager, ExecutionEnvironment, ExecutionResult};
-use crate::performance::{PerformanceProfiler, PerformanceMetrics};
-use crate::security::{SecurityMonitor, SecurityResult};
 use crate::fuzzing::{FuzzingEngine, FuzzingResult};
-use crate::metrics::{MetricsCollector, ContainerEvent, ErrorSeverity};
-use crate::{Codebase, ValidationResult, ValidationStatus, Finding, FindingType, Severity, RuntimeConfig};
+use crate::metrics::{ContainerEvent, ErrorSeverity, MetricsCollector};
+use crate::performance::{PerformanceMetrics, PerformanceProfiler};
+use crate::security::{SecurityMonitor, SecurityResult};
+use crate::{
+    Codebase, Finding, FindingType, RuntimeConfig, Severity, ValidationResult, ValidationStatus,
+};
 
 /// Validation orchestrator that coordinates all validation engines
 #[derive(Debug)]
@@ -94,13 +96,17 @@ pub enum EngineExecutionStatus {
 pub trait ValidationEngine: Send + Sync {
     /// Get the engine name
     fn name(&self) -> &str;
-    
+
     /// Check if the engine is enabled for this validation
     fn is_enabled(&self, config: &RuntimeConfig) -> bool;
-    
+
     /// Execute the validation engine
-    async fn execute(&self, env: &ExecutionEnvironment, config: &RuntimeConfig) -> Result<EngineResult>;
-    
+    async fn execute(
+        &self,
+        env: &ExecutionEnvironment,
+        config: &RuntimeConfig,
+    ) -> Result<EngineResult>;
+
     /// Get estimated execution time
     fn estimated_duration(&self, codebase: &Codebase) -> Duration;
 }
@@ -212,9 +218,14 @@ impl ValidationOrchestrator {
         let codebase_clone = codebase.clone();
         let validation_id_clone = validation_id.clone();
         tokio::spawn(async move {
-            if let Err(e) = orchestrator.execute_validation(&validation_id_clone, &codebase_clone).await {
+            if let Err(e) = orchestrator
+                .execute_validation(&validation_id_clone, &codebase_clone)
+                .await
+            {
                 error!("Validation failed: {}", e);
-                orchestrator.mark_validation_failed(&validation_id_clone, &e.to_string()).await;
+                orchestrator
+                    .mark_validation_failed(&validation_id_clone, &e.to_string())
+                    .await;
             }
         });
 
@@ -222,7 +233,10 @@ impl ValidationOrchestrator {
     }
 
     /// Get validation status
-    pub async fn get_validation_status(&self, validation_id: &str) -> Result<Option<ValidationSession>> {
+    pub async fn get_validation_status(
+        &self,
+        validation_id: &str,
+    ) -> Result<Option<ValidationSession>> {
         let active_validations = self.active_validations.read().await;
         Ok(active_validations.get(validation_id).cloned())
     }
@@ -236,30 +250,38 @@ impl ValidationOrchestrator {
     /// Cancel a running validation
     pub async fn cancel_validation(&self, validation_id: &str) -> Result<()> {
         let mut active_validations = self.active_validations.write().await;
-        
+
         if let Some(mut session) = active_validations.get_mut(validation_id) {
             session.status = ValidationStatus::Cancelled;
             info!("Validation cancelled: {}", validation_id);
         }
-        
+
         Ok(())
     }
 
     /// Execute the complete validation pipeline
-    async fn execute_validation(&self, validation_id: &str, codebase: &Codebase) -> Result<ValidationResult> {
+    async fn execute_validation(
+        &self,
+        validation_id: &str,
+        codebase: &Codebase,
+    ) -> Result<ValidationResult> {
         let start_time = Instant::now();
-        
+
         // Update phase: Environment Setup
-        self.update_validation_phase(validation_id, ValidationPhase::EnvironmentSetup).await;
-        
+        self.update_validation_phase(validation_id, ValidationPhase::EnvironmentSetup)
+            .await;
+
         // Create execution environment
-        let execution_env = self.container_manager
+        let execution_env = self
+            .container_manager
             .create_execution_environment(codebase)
             .await
             .context("Failed to create execution environment")?;
 
         // Record container creation
-        self.metrics_collector.record_container_event(ContainerEvent::Created).await?;
+        self.metrics_collector
+            .record_container_event(ContainerEvent::Created)
+            .await?;
 
         let mut validation_result = ValidationResult {
             validation_id: validation_id.to_string(),
@@ -278,17 +300,25 @@ impl ValidationOrchestrator {
         };
 
         // Execute validation pipeline
-        let pipeline_result = self.execute_pipeline(&execution_env, &mut validation_result).await;
+        let pipeline_result = self
+            .execute_pipeline(&execution_env, &mut validation_result)
+            .await;
 
         // Record container destruction
         let container_lifetime = start_time.elapsed();
-        self.metrics_collector.record_container_event(
-            ContainerEvent::Destroyed { lifetime: container_lifetime }
-        ).await?;
+        self.metrics_collector
+            .record_container_event(ContainerEvent::Destroyed {
+                lifetime: container_lifetime,
+            })
+            .await?;
 
         // Cleanup environment
         if self.config.validation.cleanup_after_validation {
-            if let Err(e) = self.container_manager.cleanup_environment(&execution_env).await {
+            if let Err(e) = self
+                .container_manager
+                .cleanup_environment(&execution_env)
+                .await
+            {
                 warn!("Failed to cleanup execution environment: {}", e);
             }
         }
@@ -306,16 +336,19 @@ impl ValidationOrchestrator {
         validation_result.overall_score = self.calculate_overall_score(&validation_result);
 
         // Update final phase
-        self.update_validation_phase(validation_id, ValidationPhase::Completed).await;
+        self.update_validation_phase(validation_id, ValidationPhase::Completed)
+            .await;
 
         // Record metrics
         let engine_metrics = HashMap::new(); // Would collect from individual engines
-        self.metrics_collector.record_validation(
-            start_time.elapsed(),
-            pipeline_result.is_ok(),
-            validation_result.overall_score,
-            engine_metrics,
-        ).await?;
+        self.metrics_collector
+            .record_validation(
+                start_time.elapsed(),
+                pipeline_result.is_ok(),
+                validation_result.overall_score,
+                engine_metrics,
+            )
+            .await?;
 
         // Remove from active validations
         {
@@ -337,12 +370,17 @@ impl ValidationOrchestrator {
     }
 
     /// Execute the validation pipeline phases
-    async fn execute_pipeline(&self, env: &ExecutionEnvironment, result: &mut ValidationResult) -> Result<()> {
+    async fn execute_pipeline(
+        &self,
+        env: &ExecutionEnvironment,
+        result: &mut ValidationResult,
+    ) -> Result<()> {
         let pipeline = self.create_validation_pipeline();
 
         for phase in &pipeline.phases {
-            self.update_validation_phase(&result.validation_id, phase.clone()).await;
-            
+            self.update_validation_phase(&result.validation_id, phase.clone())
+                .await;
+
             match phase {
                 ValidationPhase::SecurityScanning => {
                     self.execute_security_validation(env, result).await?;
@@ -372,7 +410,11 @@ impl ValidationOrchestrator {
     }
 
     /// Execute security validation
-    async fn execute_security_validation(&self, env: &ExecutionEnvironment, result: &mut ValidationResult) -> Result<()> {
+    async fn execute_security_validation(
+        &self,
+        env: &ExecutionEnvironment,
+        result: &mut ValidationResult,
+    ) -> Result<()> {
         info!("Executing security validation");
 
         self.security_monitor.start_monitoring(env).await?;
@@ -405,7 +447,11 @@ impl ValidationOrchestrator {
     }
 
     /// Execute runtime validation
-    async fn execute_runtime_validation(&self, env: &ExecutionEnvironment, result: &mut ValidationResult) -> Result<()> {
+    async fn execute_runtime_validation(
+        &self,
+        env: &ExecutionEnvironment,
+        result: &mut ValidationResult,
+    ) -> Result<()> {
         info!("Executing runtime validation");
 
         let execution_result = self.container_manager.execute_code(env).await?;
@@ -417,13 +463,24 @@ impl ValidationOrchestrator {
                 finding_type: FindingType::RuntimeError,
                 severity: Severity::High,
                 title: "Runtime Execution Failed".to_string(),
-                description: format!("Code execution failed with exit code {}", execution_result.exit_code),
+                description: format!(
+                    "Code execution failed with exit code {}",
+                    execution_result.exit_code
+                ),
                 file: None,
                 line: None,
                 evidence: [
-                    ("exit_code".to_string(), serde_json::Value::Number(execution_result.exit_code.into())),
-                    ("stderr".to_string(), serde_json::Value::String(execution_result.stderr.clone())),
-                ].into_iter().collect(),
+                    (
+                        "exit_code".to_string(),
+                        serde_json::Value::Number(execution_result.exit_code.into()),
+                    ),
+                    (
+                        "stderr".to_string(),
+                        serde_json::Value::String(execution_result.stderr.clone()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 confidence: 1.0,
             });
         }
@@ -432,7 +489,11 @@ impl ValidationOrchestrator {
     }
 
     /// Execute performance validation
-    async fn execute_performance_validation(&self, env: &ExecutionEnvironment, result: &mut ValidationResult) -> Result<()> {
+    async fn execute_performance_validation(
+        &self,
+        env: &ExecutionEnvironment,
+        result: &mut ValidationResult,
+    ) -> Result<()> {
         info!("Executing performance validation");
 
         self.performance_profiler.start_profiling(env).await?;
@@ -445,7 +506,10 @@ impl ValidationOrchestrator {
                 finding_type: FindingType::PerformanceIssue,
                 severity: Severity::Medium,
                 title: "High CPU Usage".to_string(),
-                description: format!("CPU usage ({:.1}%) exceeds threshold", result.performance_metrics.cpu_usage_percent),
+                description: format!(
+                    "CPU usage ({:.1}%) exceeds threshold",
+                    result.performance_metrics.cpu_usage_percent
+                ),
                 file: None,
                 line: None,
                 evidence: HashMap::new(),
@@ -457,7 +521,11 @@ impl ValidationOrchestrator {
     }
 
     /// Execute fuzzing validation
-    async fn execute_fuzzing_validation(&self, env: &ExecutionEnvironment, result: &mut ValidationResult) -> Result<()> {
+    async fn execute_fuzzing_validation(
+        &self,
+        env: &ExecutionEnvironment,
+        result: &mut ValidationResult,
+    ) -> Result<()> {
         info!("Executing fuzzing validation");
 
         let fuzzing_result = self.fuzzing_engine.fuzz_code(env).await?;
@@ -515,7 +583,10 @@ impl ValidationOrchestrator {
         let mut timeout_per_phase = HashMap::new();
         timeout_per_phase.insert(ValidationPhase::SecurityScanning, Duration::from_secs(60));
         timeout_per_phase.insert(ValidationPhase::RuntimeExecution, Duration::from_secs(120));
-        timeout_per_phase.insert(ValidationPhase::PerformanceProfiling, Duration::from_secs(90));
+        timeout_per_phase.insert(
+            ValidationPhase::PerformanceProfiling,
+            Duration::from_secs(90),
+        );
         timeout_per_phase.insert(ValidationPhase::FuzzTesting, Duration::from_secs(180));
 
         ValidationPipeline {
@@ -534,20 +605,28 @@ impl ValidationOrchestrator {
     /// Update validation phase
     async fn update_validation_phase(&self, validation_id: &str, phase: ValidationPhase) {
         let mut active_validations = self.active_validations.write().await;
-        
+
         if let Some(session) = active_validations.get_mut(validation_id) {
-            if !session.progress.completed_phases.contains(&session.progress.current_phase) {
-                session.progress.completed_phases.push(session.progress.current_phase.clone());
+            if !session
+                .progress
+                .completed_phases
+                .contains(&session.progress.current_phase)
+            {
+                session
+                    .progress
+                    .completed_phases
+                    .push(session.progress.current_phase.clone());
             }
             session.progress.current_phase = phase;
-            session.progress.overall_progress = session.progress.completed_phases.len() as f64 / 8.0; // 8 total phases
+            session.progress.overall_progress =
+                session.progress.completed_phases.len() as f64 / 8.0; // 8 total phases
         }
     }
 
     /// Mark validation as failed
     async fn mark_validation_failed(&self, validation_id: &str, error_message: &str) {
         let mut active_validations = self.active_validations.write().await;
-        
+
         if let Some(session) = active_validations.get_mut(validation_id) {
             session.status = ValidationStatus::Failed;
             error!("Validation {} failed: {}", validation_id, error_message);
@@ -555,13 +634,16 @@ impl ValidationOrchestrator {
     }
 
     /// Estimate completion time for validation
-    fn estimate_completion_time(&self, codebase: &Codebase) -> Option<chrono::DateTime<chrono::Utc>> {
+    fn estimate_completion_time(
+        &self,
+        codebase: &Codebase,
+    ) -> Option<chrono::DateTime<chrono::Utc>> {
         // Simple estimation based on codebase size
         let estimated_seconds = match codebase.files.len() {
-            0..=10 => 120,    // 2 minutes for small codebases
-            11..=50 => 300,   // 5 minutes for medium codebases
-            51..=100 => 600,  // 10 minutes for large codebases
-            _ => 900,         // 15 minutes for very large codebases
+            0..=10 => 120,   // 2 minutes for small codebases
+            11..=50 => 300,  // 5 minutes for medium codebases
+            51..=100 => 600, // 10 minutes for large codebases
+            _ => 900,        // 15 minutes for very large codebases
         };
 
         Some(chrono::Utc::now() + chrono::Duration::seconds(estimated_seconds))
@@ -610,12 +692,11 @@ impl ResultAggregator {
         let quality_score = self.calculate_quality_score(result);
         let reliability_score = self.calculate_reliability_score(result);
 
-        let weighted_score = 
-            security_score * self.weight_config.security_weight +
-            performance_score * self.weight_config.performance_weight +
-            functionality_score * self.weight_config.functionality_weight +
-            quality_score * self.weight_config.code_quality_weight +
-            reliability_score * self.weight_config.reliability_weight;
+        let weighted_score = security_score * self.weight_config.security_weight
+            + performance_score * self.weight_config.performance_weight
+            + functionality_score * self.weight_config.functionality_weight
+            + quality_score * self.weight_config.code_quality_weight
+            + reliability_score * self.weight_config.reliability_weight;
 
         weighted_score.clamp(0.0, 100.0)
     }
@@ -628,16 +709,18 @@ impl ResultAggregator {
         } else {
             100.0
         };
-        
+
         (cpu_score + memory_score) / 2.0
     }
 
     /// Calculate functionality score based on execution success
     fn calculate_functionality_score(&self, result: &ValidationResult) -> f64 {
-        let runtime_errors = result.findings.iter()
+        let runtime_errors = result
+            .findings
+            .iter()
             .filter(|f| matches!(f.finding_type, FindingType::RuntimeError))
             .count();
-        
+
         if runtime_errors == 0 {
             100.0
         } else {
@@ -654,10 +737,12 @@ impl ResultAggregator {
 
     /// Calculate reliability score
     fn calculate_reliability_score(&self, result: &ValidationResult) -> f64 {
-        let crash_findings = result.findings.iter()
+        let crash_findings = result
+            .findings
+            .iter()
             .filter(|f| matches!(f.finding_type, FindingType::CrashProne))
             .count();
-        
+
         if crash_findings == 0 {
             100.0
         } else {

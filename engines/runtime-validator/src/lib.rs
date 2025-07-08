@@ -1,5 +1,5 @@
 //! Kwality Runtime Validation Engine
-//! 
+//!
 //! This engine provides safe execution and dynamic analysis of AI-generated code
 //! using containerized environments, performance profiling, and security monitoring.
 
@@ -9,23 +9,23 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
+use sysinfo::SystemExt;
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
-use sysinfo::SystemExt;
 
 pub mod container;
-pub mod performance;
-pub mod security;
 pub mod fuzzing;
 pub mod metrics;
+pub mod performance;
+pub mod security;
 pub mod validation;
 
 use container::ContainerManager;
-use performance::{PerformanceProfiler, PerformanceMetrics};
-use security::{SecurityMonitor, SecurityResult};
 use fuzzing::{FuzzingEngine, FuzzingResult};
 use metrics::MetricsCollector;
+use performance::{PerformanceMetrics, PerformanceProfiler};
+use security::{SecurityMonitor, SecurityResult};
 
 /// Main runtime validation engine
 #[derive(Debug)]
@@ -308,8 +308,8 @@ impl RuntimeValidator {
         let fuzzing_engine = FuzzingEngine::new(config.fuzzing.clone())
             .context("Failed to initialize fuzzing engine")?;
 
-        let metrics_collector = MetricsCollector::new()
-            .context("Failed to initialize metrics collector")?;
+        let metrics_collector =
+            MetricsCollector::new().context("Failed to initialize metrics collector")?;
 
         Ok(Self {
             container_manager,
@@ -325,7 +325,7 @@ impl RuntimeValidator {
     pub async fn validate(&self, codebase: &Codebase) -> Result<ValidationResult> {
         let validation_id = Uuid::new_v4().to_string();
         let started_at = chrono::Utc::now();
-        
+
         info!(
             validation_id = %validation_id,
             codebase_id = %codebase.id,
@@ -354,37 +354,35 @@ impl RuntimeValidator {
         let timeout_duration = Duration::from_secs(self.config.container.timeout_seconds);
 
         match timeout(timeout_duration, validation_future).await {
-            Ok(validation_result) => {
-                match validation_result {
-                    Ok(_) => {
-                        result.status = ValidationStatus::Completed;
-                        info!(
-                            validation_id = %validation_id,
-                            "Runtime validation completed successfully"
-                        );
-                    }
-                    Err(e) => {
-                        result.status = ValidationStatus::Failed;
-                        error!(
-                            validation_id = %validation_id,
-                            error = %e,
-                            "Runtime validation failed"
-                        );
-                        
-                        result.findings.push(Finding {
-                            id: Uuid::new_v4().to_string(),
-                            finding_type: FindingType::RuntimeError,
-                            severity: Severity::Critical,
-                            title: "Validation Execution Failed".to_string(),
-                            description: format!("Runtime validation failed: {}", e),
-                            file: None,
-                            line: None,
-                            evidence: HashMap::new(),
-                            confidence: 1.0,
-                        });
-                    }
+            Ok(validation_result) => match validation_result {
+                Ok(_) => {
+                    result.status = ValidationStatus::Completed;
+                    info!(
+                        validation_id = %validation_id,
+                        "Runtime validation completed successfully"
+                    );
                 }
-            }
+                Err(e) => {
+                    result.status = ValidationStatus::Failed;
+                    error!(
+                        validation_id = %validation_id,
+                        error = %e,
+                        "Runtime validation failed"
+                    );
+
+                    result.findings.push(Finding {
+                        id: Uuid::new_v4().to_string(),
+                        finding_type: FindingType::RuntimeError,
+                        severity: Severity::Critical,
+                        title: "Validation Execution Failed".to_string(),
+                        description: format!("Runtime validation failed: {}", e),
+                        file: None,
+                        line: None,
+                        evidence: HashMap::new(),
+                        confidence: 1.0,
+                    });
+                }
+            },
             Err(_) => {
                 result.status = ValidationStatus::Timeout;
                 warn!(
@@ -392,7 +390,7 @@ impl RuntimeValidator {
                     timeout_seconds = self.config.container.timeout_seconds,
                     "Runtime validation timed out"
                 );
-                
+
                 result.findings.push(Finding {
                     id: Uuid::new_v4().to_string(),
                     finding_type: FindingType::RuntimeError,
@@ -414,9 +412,10 @@ impl RuntimeValidator {
         result.completed_at = Some(chrono::Utc::now());
         if let Some(completed_at) = result.completed_at {
             result.duration = Some(
-                completed_at.signed_duration_since(result.started_at)
+                completed_at
+                    .signed_duration_since(result.started_at)
                     .to_std()
-                    .unwrap_or(Duration::ZERO)
+                    .unwrap_or(Duration::ZERO),
             );
         }
 
@@ -436,7 +435,8 @@ impl RuntimeValidator {
         result: &mut ValidationResult,
     ) -> Result<()> {
         // Step 1: Create execution environment
-        let execution_env = self.container_manager
+        let execution_env = self
+            .container_manager
             .create_execution_environment(codebase)
             .await
             .context("Failed to create execution environment")?;
@@ -454,18 +454,18 @@ impl RuntimeValidator {
             .context("Failed to start performance profiling")?;
 
         // Step 4: Execute the code
-        let execution_result = self.container_manager
-            .execute_code(&execution_env)
-            .await;
+        let execution_result = self.container_manager.execute_code(&execution_env).await;
 
         // Step 5: Collect security results
-        result.security_result = self.security_monitor
+        result.security_result = self
+            .security_monitor
             .collect_results(&execution_env)
             .await
             .context("Failed to collect security results")?;
 
         // Step 6: Collect performance metrics
-        result.performance_metrics = self.performance_profiler
+        result.performance_metrics = self
+            .performance_profiler
             .collect_metrics(&execution_env)
             .await
             .context("Failed to collect performance metrics")?;
@@ -476,7 +476,7 @@ impl RuntimeValidator {
                 self.fuzzing_engine
                     .fuzz_code(&execution_env)
                     .await
-                    .context("Failed to run fuzzing")?
+                    .context("Failed to run fuzzing")?,
             );
         }
 
@@ -534,9 +534,17 @@ impl RuntimeValidator {
                 file: None,
                 line: None,
                 evidence: [
-                    ("exit_code".to_string(), serde_json::Value::Number(execution_result.exit_code.into())),
-                    ("stderr".to_string(), serde_json::Value::String(execution_result.stderr.clone())),
-                ].into_iter().collect(),
+                    (
+                        "exit_code".to_string(),
+                        serde_json::Value::Number(execution_result.exit_code.into()),
+                    ),
+                    (
+                        "stderr".to_string(),
+                        serde_json::Value::String(execution_result.stderr.clone()),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 confidence: 0.9,
             });
         }
@@ -558,12 +566,36 @@ impl RuntimeValidator {
     /// Analyze stderr output for error patterns
     fn analyze_stderr(&self, stderr: &str, result: &mut ValidationResult) {
         let error_patterns = [
-            (r"segmentation fault|segfault", FindingType::CrashProne, Severity::Critical),
-            (r"memory leak|leak sanitizer", FindingType::MemoryLeak, Severity::High),
-            (r"buffer overflow|stack overflow", FindingType::SecurityVulnerability, Severity::Critical),
-            (r"assertion failed|panic", FindingType::RuntimeError, Severity::Medium),
-            (r"out of memory|oom", FindingType::ResourceExhaustion, Severity::High),
-            (r"timeout|deadlock", FindingType::PerformanceIssue, Severity::Medium),
+            (
+                r"segmentation fault|segfault",
+                FindingType::CrashProne,
+                Severity::Critical,
+            ),
+            (
+                r"memory leak|leak sanitizer",
+                FindingType::MemoryLeak,
+                Severity::High,
+            ),
+            (
+                r"buffer overflow|stack overflow",
+                FindingType::SecurityVulnerability,
+                Severity::Critical,
+            ),
+            (
+                r"assertion failed|panic",
+                FindingType::RuntimeError,
+                Severity::Medium,
+            ),
+            (
+                r"out of memory|oom",
+                FindingType::ResourceExhaustion,
+                Severity::High,
+            ),
+            (
+                r"timeout|deadlock",
+                FindingType::PerformanceIssue,
+                Severity::Medium,
+            ),
         ];
 
         for (pattern, finding_type, severity) in error_patterns {
@@ -574,13 +606,24 @@ impl RuntimeValidator {
                         finding_type,
                         severity,
                         title: format!("Error Pattern Detected: {}", pattern),
-                        description: format!("Detected error pattern '{}' in program output", pattern),
+                        description: format!(
+                            "Detected error pattern '{}' in program output",
+                            pattern
+                        ),
                         file: None,
                         line: None,
                         evidence: [
-                            ("pattern".to_string(), serde_json::Value::String(pattern.to_string())),
-                            ("stderr_excerpt".to_string(), serde_json::Value::String(stderr.to_string())),
-                        ].into_iter().collect(),
+                            (
+                                "pattern".to_string(),
+                                serde_json::Value::String(pattern.to_string()),
+                            ),
+                            (
+                                "stderr_excerpt".to_string(),
+                                serde_json::Value::String(stderr.to_string()),
+                            ),
+                        ]
+                        .into_iter()
+                        .collect(),
                         confidence: 0.8,
                     });
                 }
@@ -589,7 +632,11 @@ impl RuntimeValidator {
     }
 
     /// Analyze performance metrics for issues
-    fn analyze_performance_issues(&self, metrics: &PerformanceMetrics, result: &mut ValidationResult) {
+    fn analyze_performance_issues(
+        &self,
+        metrics: &PerformanceMetrics,
+        result: &mut ValidationResult,
+    ) {
         // Check CPU usage
         if metrics.cpu_usage_percent > self.config.performance.thresholds.max_cpu_usage_percent {
             result.findings.push(Finding {
@@ -605,13 +652,24 @@ impl RuntimeValidator {
                 file: None,
                 line: None,
                 evidence: [
-                    ("cpu_usage".to_string(), serde_json::Value::Number(
-                        serde_json::Number::from_f64(metrics.cpu_usage_percent).unwrap()
-                    )),
-                    ("threshold".to_string(), serde_json::Value::Number(
-                        serde_json::Number::from_f64(self.config.performance.thresholds.max_cpu_usage_percent).unwrap()
-                    )),
-                ].into_iter().collect(),
+                    (
+                        "cpu_usage".to_string(),
+                        serde_json::Value::Number(
+                            serde_json::Number::from_f64(metrics.cpu_usage_percent).unwrap(),
+                        ),
+                    ),
+                    (
+                        "threshold".to_string(),
+                        serde_json::Value::Number(
+                            serde_json::Number::from_f64(
+                                self.config.performance.thresholds.max_cpu_usage_percent,
+                            )
+                            .unwrap(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 confidence: 0.9,
             });
         }
@@ -625,15 +683,28 @@ impl RuntimeValidator {
                 title: "High Memory Usage".to_string(),
                 description: format!(
                     "Memory usage ({} MB) exceeds threshold ({} MB)",
-                    metrics.memory_usage_mb,
-                    self.config.performance.thresholds.max_memory_usage_mb
+                    metrics.memory_usage_mb, self.config.performance.thresholds.max_memory_usage_mb
                 ),
                 file: None,
                 line: None,
                 evidence: [
-                    ("memory_usage_mb".to_string(), serde_json::Value::Number(metrics.memory_usage_mb.into())),
-                    ("threshold_mb".to_string(), serde_json::Value::Number(self.config.performance.thresholds.max_memory_usage_mb.into())),
-                ].into_iter().collect(),
+                    (
+                        "memory_usage_mb".to_string(),
+                        serde_json::Value::Number(metrics.memory_usage_mb.into()),
+                    ),
+                    (
+                        "threshold_mb".to_string(),
+                        serde_json::Value::Number(
+                            self.config
+                                .performance
+                                .thresholds
+                                .max_memory_usage_mb
+                                .into(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 confidence: 0.9,
             });
         }
@@ -653,9 +724,23 @@ impl RuntimeValidator {
                 file: None,
                 line: None,
                 evidence: [
-                    ("execution_time_ms".to_string(), serde_json::Value::Number(metrics.execution_time_ms.into())),
-                    ("threshold_ms".to_string(), serde_json::Value::Number(self.config.performance.thresholds.max_execution_time_ms.into())),
-                ].into_iter().collect(),
+                    (
+                        "execution_time_ms".to_string(),
+                        serde_json::Value::Number(metrics.execution_time_ms.into()),
+                    ),
+                    (
+                        "threshold_ms".to_string(),
+                        serde_json::Value::Number(
+                            self.config
+                                .performance
+                                .thresholds
+                                .max_execution_time_ms
+                                .into(),
+                        ),
+                    ),
+                ]
+                .into_iter()
+                .collect(),
                 confidence: 0.9,
             });
         }
@@ -763,21 +848,34 @@ impl RuntimeValidator {
     /// Get health status of the runtime validator
     pub async fn health_check(&self) -> Result<HashMap<String, serde_json::Value>> {
         let mut status = HashMap::new();
-        
-        status.insert("status".to_string(), serde_json::Value::String("healthy".to_string()));
-        status.insert("version".to_string(), serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()));
-        
+
+        status.insert(
+            "status".to_string(),
+            serde_json::Value::String("healthy".to_string()),
+        );
+        status.insert(
+            "version".to_string(),
+            serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
+        );
+
         // Check container manager health
         let container_health = self.container_manager.health_check().await?;
-        status.insert("container_manager".to_string(), serde_json::to_value(container_health)?);
-        
+        status.insert(
+            "container_manager".to_string(),
+            serde_json::to_value(container_health)?,
+        );
+
         // Add system metrics
         let system_info = sysinfo::System::new_all();
-        status.insert("system_memory_usage".to_string(), 
-                     serde_json::Value::Number(system_info.used_memory().into()));
-        status.insert("system_cpu_count".to_string(), 
-                     serde_json::Value::Number(system_info.cpus().len().into()));
-        
+        status.insert(
+            "system_memory_usage".to_string(),
+            serde_json::Value::Number(system_info.used_memory().into()),
+        );
+        status.insert(
+            "system_cpu_count".to_string(),
+            serde_json::Value::Number(system_info.cpus().len().into()),
+        );
+
         Ok(status)
     }
 }
@@ -818,10 +916,7 @@ impl Default for RuntimeConfig {
                     "umount".to_string(),
                 ],
                 allowed_networks: vec!["127.0.0.1".to_string()],
-                sensitive_files: vec![
-                    "/etc/passwd".to_string(),
-                    "/etc/shadow".to_string(),
-                ],
+                sensitive_files: vec!["/etc/passwd".to_string(), "/etc/shadow".to_string()],
             },
             fuzzing: FuzzingConfig {
                 enabled: false,

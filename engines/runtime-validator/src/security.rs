@@ -1,5 +1,5 @@
 //! Security monitoring and analysis for code execution
-//! 
+//!
 //! This module provides comprehensive security monitoring including syscall tracking,
 //! vulnerability detection, secrets scanning, and behavioral analysis.
 
@@ -8,10 +8,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use tracing::{debug, info, warn, error};
+use tracing::{debug, error, info, warn};
 
-use crate::{SecurityConfig, Codebase};
 use crate::container::{ExecutionEnvironment, SecurityEvent};
+use crate::{Codebase, SecurityConfig};
 
 /// Security monitor for code execution
 #[derive(Debug)]
@@ -357,7 +357,8 @@ impl SecurityMonitor {
         }
 
         // Perform initial security scans
-        self.scan_codebase_for_vulnerabilities(&env.codebase).await?;
+        self.scan_codebase_for_vulnerabilities(&env.codebase)
+            .await?;
         self.scan_for_secrets(&env.codebase).await?;
 
         Ok(())
@@ -365,7 +366,10 @@ impl SecurityMonitor {
 
     /// Collect security analysis results
     pub async fn collect_results(&self, env: &ExecutionEnvironment) -> Result<SecurityResult> {
-        info!("Collecting security analysis results for environment {}", env.id);
+        info!(
+            "Collecting security analysis results for environment {}",
+            env.id
+        );
 
         // Collect all security findings
         let violations = self.collect_security_violations(env).await?;
@@ -375,13 +379,20 @@ impl SecurityMonitor {
         let compliance_checks = self.run_compliance_checks(&env.codebase).await?;
 
         // Calculate overall security score
-        let security_score = self.calculate_security_score(&violations, &vulnerabilities, &secrets).await?;
+        let security_score = self
+            .calculate_security_score(&violations, &vulnerabilities, &secrets)
+            .await?;
         let risk_level = self.determine_risk_level(security_score, &violations);
 
         // Generate security recommendations
-        let recommendations = self.generate_security_recommendations(
-            &violations, &vulnerabilities, &secrets, &behavioral_anomalies
-        ).await?;
+        let recommendations = self
+            .generate_security_recommendations(
+                &violations,
+                &vulnerabilities,
+                &secrets,
+                &behavioral_anomalies,
+            )
+            .await?;
 
         let result = SecurityResult {
             security_score,
@@ -394,8 +405,12 @@ impl SecurityMonitor {
             recommendations,
         };
 
-        info!("Security analysis completed: score={:.1}, risk={:?}, violations={}", 
-              result.security_score, result.risk_level, result.violations.len());
+        info!(
+            "Security analysis completed: score={:.1}, risk={:?}, violations={}",
+            result.security_score,
+            result.risk_level,
+            result.violations.len()
+        );
 
         Ok(result)
     }
@@ -403,7 +418,7 @@ impl SecurityMonitor {
     /// Scan codebase for security vulnerabilities
     async fn scan_codebase_for_vulnerabilities(&self, codebase: &Codebase) -> Result<()> {
         info!("Scanning codebase for vulnerabilities");
-        
+
         for file in &codebase.files {
             self.vulnerability_scanner.scan_file(file).await?;
         }
@@ -423,7 +438,10 @@ impl SecurityMonitor {
     }
 
     /// Collect security violations
-    async fn collect_security_violations(&self, env: &ExecutionEnvironment) -> Result<Vec<SecurityViolation>> {
+    async fn collect_security_violations(
+        &self,
+        env: &ExecutionEnvironment,
+    ) -> Result<Vec<SecurityViolation>> {
         let mut violations = Vec::new();
 
         // Check for unauthorized syscalls
@@ -467,7 +485,10 @@ impl SecurityMonitor {
             check_name: "Injection Prevention".to_string(),
             status: ComplianceStatus::Pass,
             description: "Check for injection vulnerabilities".to_string(),
-            requirements: vec!["Input validation".to_string(), "Parameterized queries".to_string()],
+            requirements: vec![
+                "Input validation".to_string(),
+                "Parameterized queries".to_string(),
+            ],
             findings: vec![],
         });
 
@@ -532,8 +553,10 @@ impl SecurityMonitor {
 
     /// Determine risk level based on score and violations
     fn determine_risk_level(&self, score: f64, violations: &[SecurityViolation]) -> RiskLevel {
-        let has_critical = violations.iter().any(|v| matches!(v.severity, ViolationSeverity::Critical));
-        
+        let has_critical = violations
+            .iter()
+            .any(|v| matches!(v.severity, ViolationSeverity::Critical));
+
         if has_critical || score < 30.0 {
             RiskLevel::Critical
         } else if score < 50.0 {
@@ -563,7 +586,10 @@ impl SecurityMonitor {
                 recommendation_type: SecurityRecommendationType::VulnerabilityFix,
                 priority: SecurityPriority::Critical,
                 title: "Fix identified vulnerabilities".to_string(),
-                description: format!("{} vulnerabilities require immediate attention", vulnerabilities.len()),
+                description: format!(
+                    "{} vulnerabilities require immediate attention",
+                    vulnerabilities.len()
+                ),
                 remediation_steps: vec![
                     "Review and patch all critical vulnerabilities".to_string(),
                     "Update dependencies to secure versions".to_string(),
@@ -592,9 +618,10 @@ impl SecurityMonitor {
         }
 
         // Access control recommendations
-        let unauthorized_access = violations.iter()
+        let unauthorized_access = violations
+            .iter()
             .any(|v| matches!(v.violation_type, ViolationType::UnauthorizedSyscall));
-        
+
         if unauthorized_access {
             recommendations.push(SecurityRecommendation {
                 recommendation_type: SecurityRecommendationType::AccessControl,
@@ -620,7 +647,11 @@ impl SecurityMonitor {
 
         // Simulate network monitoring
         // In a real implementation, this would check actual network activity
-        if !self.config.allowed_networks.contains(&"0.0.0.0".to_string()) {
+        if !self
+            .config
+            .allowed_networks
+            .contains(&"0.0.0.0".to_string())
+        {
             violations.push(SecurityViolation {
                 violation_type: ViolationType::NetworkAccess,
                 severity: ViolationSeverity::Medium,
@@ -648,7 +679,10 @@ impl SecurityMonitor {
                 violation_type: ViolationType::FileSystemAccess,
                 severity: ViolationSeverity::High,
                 title: "Sensitive file access".to_string(),
-                description: format!("Code attempted to access sensitive file: {}", sensitive_file),
+                description: format!(
+                    "Code attempted to access sensitive file: {}",
+                    sensitive_file
+                ),
                 timestamp: chrono::Utc::now(),
                 location: Some(sensitive_file.clone()),
                 evidence: HashMap::new(),
@@ -716,10 +750,11 @@ impl VulnerabilityScanner {
             "sql_injection".to_string(),
             VulnerabilityPattern {
                 name: "SQL Injection".to_string(),
-                pattern: Regex::new(r"(?i)(select|insert|update|delete).*(\+|concat).*input").unwrap(),
+                pattern: Regex::new(r"(?i)(select|insert|update|delete).*(\+|concat).*input")
+                    .unwrap(),
                 severity: VulnerabilitySeverity::High,
                 description: "Potential SQL injection vulnerability".to_string(),
-            }
+            },
         );
 
         vulnerability_db.insert(
@@ -729,7 +764,7 @@ impl VulnerabilityScanner {
                 pattern: Regex::new(r"(?i)(system|exec|eval|cmd).*input").unwrap(),
                 severity: VulnerabilitySeverity::Critical,
                 description: "Potential command injection vulnerability".to_string(),
-            }
+            },
         );
 
         Ok(Self { vulnerability_db })
@@ -738,10 +773,13 @@ impl VulnerabilityScanner {
     /// Scan a file for vulnerabilities
     pub async fn scan_file(&self, file: &crate::CodeFile) -> Result<()> {
         let content = &file.content;
-        
+
         for (_, pattern) in &self.vulnerability_db {
             if pattern.pattern.is_match(&content) {
-                debug!("Vulnerability pattern '{}' found in file: {}", pattern.name, file.path);
+                debug!(
+                    "Vulnerability pattern '{}' found in file: {}",
+                    pattern.name, file.path
+                );
             }
         }
 
@@ -751,21 +789,19 @@ impl VulnerabilityScanner {
     /// Get vulnerability findings
     pub async fn get_findings(&self) -> Result<Vec<Vulnerability>> {
         // Simplified - return example vulnerabilities
-        Ok(vec![
-            Vulnerability {
-                id: "vuln-001".to_string(),
-                vulnerability_type: VulnerabilityType::SqlInjection,
-                severity: VulnerabilitySeverity::High,
-                title: "Potential SQL Injection".to_string(),
-                description: "User input used directly in SQL query".to_string(),
-                affected_component: "database.go:45".to_string(),
-                cve_id: None,
-                cvss_score: Some(7.5),
-                discovered_at: chrono::Utc::now(),
-                remediation: "Use parameterized queries or prepared statements".to_string(),
-                references: vec!["https://owasp.org/www-community/attacks/SQL_Injection".to_string()],
-            }
-        ])
+        Ok(vec![Vulnerability {
+            id: "vuln-001".to_string(),
+            vulnerability_type: VulnerabilityType::SqlInjection,
+            severity: VulnerabilitySeverity::High,
+            title: "Potential SQL Injection".to_string(),
+            description: "User input used directly in SQL query".to_string(),
+            affected_component: "database.go:45".to_string(),
+            cve_id: None,
+            cvss_score: Some(7.5),
+            discovered_at: chrono::Utc::now(),
+            remediation: "Use parameterized queries or prepared statements".to_string(),
+            references: vec!["https://owasp.org/www-community/attacks/SQL_Injection".to_string()],
+        }])
     }
 }
 
@@ -775,13 +811,19 @@ impl SecretsDetector {
         let secret_patterns = vec![
             SecretPattern {
                 name: "API Key".to_string(),
-                pattern: Regex::new(r"(?i)(api[_-]?key|apikey)\s*[:=]\s*['\x22]?([a-zA-Z0-9_-]{16,})['\x22]?").unwrap(),
+                pattern: Regex::new(
+                    r"(?i)(api[_-]?key|apikey)\s*[:=]\s*['\x22]?([a-zA-Z0-9_-]{16,})['\x22]?",
+                )
+                .unwrap(),
                 secret_type: SecretType::ApiKey,
                 confidence: 0.8,
             },
             SecretPattern {
                 name: "Password".to_string(),
-                pattern: Regex::new(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\x22]?([^'\x22\s]{8,})['\x22]?").unwrap(),
+                pattern: Regex::new(
+                    r"(?i)(password|passwd|pwd)\s*[:=]\s*['\x22]?([^'\x22\s]{8,})['\x22]?",
+                )
+                .unwrap(),
                 secret_type: SecretType::Password,
                 confidence: 0.7,
             },
@@ -799,10 +841,13 @@ impl SecretsDetector {
     /// Scan a file for secrets
     pub async fn scan_file(&self, file: &crate::CodeFile) -> Result<()> {
         let content = &file.content;
-        
+
         for pattern in &self.secret_patterns {
             if pattern.pattern.is_match(&content) {
-                debug!("Secret pattern '{}' found in file: {}", pattern.name, file.path);
+                debug!(
+                    "Secret pattern '{}' found in file: {}",
+                    pattern.name, file.path
+                );
             }
         }
 
@@ -812,17 +857,15 @@ impl SecretsDetector {
     /// Get secret findings
     pub async fn get_findings(&self) -> Result<Vec<SecretFindings>> {
         // Simplified - return example findings
-        Ok(vec![
-            SecretFindings {
-                secret_type: SecretType::ApiKey,
-                confidence: 0.85,
-                file_path: "config.go".to_string(),
-                line_number: 15,
-                matched_text: "api_key = \"sk-1234567890abcdef\"".to_string(),
-                context: "API key configuration".to_string(),
-                severity: SecretSeverity::High,
-            }
-        ])
+        Ok(vec![SecretFindings {
+            secret_type: SecretType::ApiKey,
+            confidence: 0.85,
+            file_path: "config.go".to_string(),
+            line_number: 15,
+            matched_text: "api_key = \"sk-1234567890abcdef\"".to_string(),
+            context: "API key configuration".to_string(),
+            severity: SecretSeverity::High,
+        }])
     }
 }
 
@@ -836,14 +879,8 @@ impl BehaviorAnalyzer {
                 "open".to_string(),
                 "close".to_string(),
             ]),
-            normal_file_access: HashSet::from([
-                "/tmp".to_string(),
-                "/var/tmp".to_string(),
-            ]),
-            normal_network_patterns: vec![
-                "localhost".to_string(),
-                "127.0.0.1".to_string(),
-            ],
+            normal_file_access: HashSet::from(["/tmp".to_string(), "/var/tmp".to_string()]),
+            normal_network_patterns: vec!["localhost".to_string(), "127.0.0.1".to_string()],
         };
 
         Ok(Self {

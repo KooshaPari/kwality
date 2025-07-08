@@ -1,5 +1,5 @@
 //! Performance profiling and benchmarking for code validation
-//! 
+//!
 //! This module provides comprehensive performance analysis including CPU profiling,
 //! memory analysis, I/O monitoring, and benchmarking capabilities.
 
@@ -7,11 +7,11 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use sysinfo::{System, SystemExt, ProcessExt, PidExt, CpuExt};
+use sysinfo::{CpuExt, PidExt, ProcessExt, System, SystemExt};
 use tracing::{debug, info, warn};
 
-use crate::{PerformanceConfig, PerformanceThresholds};
 use crate::container::ExecutionEnvironment;
+use crate::{PerformanceConfig, PerformanceThresholds};
 
 /// Performance profiler for code execution
 #[derive(Debug)]
@@ -250,16 +250,16 @@ impl PerformanceProfiler {
     /// Start performance profiling for an execution environment
     pub async fn start_profiling(&self, env: &ExecutionEnvironment) -> Result<()> {
         info!("Starting performance profiling for environment {}", env.id);
-        
+
         // Initialize profiling subsystems based on configuration
         if self.config.enable_cpu_profiling {
             debug!("CPU profiling enabled");
         }
-        
+
         if self.config.enable_memory_profiling {
             debug!("Memory profiling enabled");
         }
-        
+
         if self.config.enable_io_profiling {
             debug!("I/O profiling enabled");
         }
@@ -292,7 +292,9 @@ impl PerformanceProfiler {
         let bottlenecks = self.identify_bottlenecks(&profiling_data).await?;
 
         // Generate performance recommendations
-        let recommendations = self.generate_recommendations(&profiling_data, &bottlenecks).await?;
+        let recommendations = self
+            .generate_recommendations(&profiling_data, &bottlenecks)
+            .await?;
 
         let metrics = PerformanceMetrics {
             execution_time_ms: start_time.elapsed().as_millis() as u64,
@@ -310,8 +312,10 @@ impl PerformanceProfiler {
             recommendations,
         };
 
-        info!("Performance metrics collected: CPU: {:.1}%, Memory: {} MB", 
-              metrics.cpu_usage_percent, metrics.memory_usage_mb);
+        info!(
+            "Performance metrics collected: CPU: {:.1}%, Memory: {} MB",
+            metrics.cpu_usage_percent, metrics.memory_usage_mb
+        );
 
         Ok(metrics)
     }
@@ -322,13 +326,16 @@ impl PerformanceProfiler {
         // In production, this would integrate with system monitoring tools
         let mut system = System::new();
         system.refresh_cpu();
-        
+
         tokio::time::sleep(Duration::from_millis(100)).await;
         system.refresh_cpu();
 
-        let avg_cpu = system.cpus().iter()
+        let avg_cpu = system
+            .cpus()
+            .iter()
             .map(|cpu| cpu.cpu_usage() as f64)
-            .sum::<f64>() / system.cpus().len() as f64;
+            .sum::<f64>()
+            / system.cpus().len() as f64;
 
         Ok(avg_cpu)
     }
@@ -350,9 +357,12 @@ impl PerformanceProfiler {
     }
 
     /// Run performance benchmarks
-    async fn run_benchmarks(&self, env: &ExecutionEnvironment) -> Result<HashMap<String, BenchmarkResult>> {
+    async fn run_benchmarks(
+        &self,
+        env: &ExecutionEnvironment,
+    ) -> Result<HashMap<String, BenchmarkResult>> {
         info!("Running performance benchmarks");
-        
+
         let mut benchmarks = HashMap::new();
 
         // CPU benchmark
@@ -384,13 +394,13 @@ impl PerformanceProfiler {
 
         for _ in 0..iterations {
             let start = Instant::now();
-            
+
             // CPU-intensive operation (mathematical computation)
             let mut result = 0u64;
             for i in 0..100_000 {
                 result = result.wrapping_add(i * i);
             }
-            
+
             durations.push(start.elapsed().as_nanos() as u64);
         }
 
@@ -404,10 +414,10 @@ impl PerformanceProfiler {
 
         for _ in 0..iterations {
             let start = Instant::now();
-            
+
             // Memory allocation pattern
             let _data: Vec<u8> = vec![0; 1024 * 1024]; // 1MB allocation
-            
+
             durations.push(start.elapsed().as_nanos() as u64);
         }
 
@@ -421,13 +431,13 @@ impl PerformanceProfiler {
 
         for _ in 0..iterations {
             let start = Instant::now();
-            
+
             // I/O operation (file system access)
             let temp_file = std::env::temp_dir().join("benchmark_test");
             let _ = std::fs::write(&temp_file, b"benchmark data");
             let _ = std::fs::read(&temp_file);
             let _ = std::fs::remove_file(&temp_file);
-            
+
             durations.push(start.elapsed().as_nanos() as u64);
         }
 
@@ -435,19 +445,26 @@ impl PerformanceProfiler {
     }
 
     /// Calculate benchmark statistics
-    fn calculate_benchmark_result(&self, name: &str, iterations: u32, durations: Vec<u64>) -> BenchmarkResult {
+    fn calculate_benchmark_result(
+        &self,
+        name: &str,
+        iterations: u32,
+        durations: Vec<u64>,
+    ) -> BenchmarkResult {
         let total_duration: u64 = durations.iter().sum();
         let avg_duration = total_duration / iterations as u64;
         let min_duration = *durations.iter().min().unwrap_or(&0);
         let max_duration = *durations.iter().max().unwrap_or(&0);
-        
+
         // Calculate standard deviation
-        let variance: f64 = durations.iter()
+        let variance: f64 = durations
+            .iter()
             .map(|&d| {
                 let diff = d as f64 - avg_duration as f64;
                 diff * diff
             })
-            .sum::<f64>() / iterations as f64;
+            .sum::<f64>()
+            / iterations as f64;
         let std_deviation = variance.sqrt() as u64;
 
         // Calculate throughput
@@ -477,16 +494,14 @@ impl PerformanceProfiler {
             user_cpu_time_ms: 80,
             system_cpu_time_ms: 20,
             cpu_utilization_percent: 45.0,
-            hot_functions: vec![
-                HotFunction {
-                    name: "main".to_string(),
-                    file: Some("main.go".to_string()),
-                    line: Some(10),
-                    cpu_time_percent: 60.0,
-                    call_count: 1,
-                    avg_duration_ns: 80_000_000,
-                }
-            ],
+            hot_functions: vec![HotFunction {
+                name: "main".to_string(),
+                file: Some("main.go".to_string()),
+                line: Some(10),
+                cpu_time_percent: 60.0,
+                call_count: 1,
+                avg_duration_ns: 80_000_000,
+            }],
             instruction_mix: InstructionMix {
                 integer_ops_percent: 40.0,
                 floating_point_ops_percent: 20.0,
@@ -502,14 +517,12 @@ impl PerformanceProfiler {
             peak_heap_size_mb: 64,
             current_heap_size_mb: 32,
             memory_leaks: vec![],
-            allocation_patterns: vec![
-                AllocationPattern {
-                    pattern_type: "small_objects".to_string(),
-                    frequency: 800,
-                    average_size_bytes: 64,
-                    total_size_bytes: 51200,
-                }
-            ],
+            allocation_patterns: vec![AllocationPattern {
+                pattern_type: "small_objects".to_string(),
+                frequency: 800,
+                average_size_bytes: 64,
+                total_size_bytes: 51200,
+            }],
             garbage_collection_stats: GcStats {
                 collections: 5,
                 total_gc_time_ms: 25,
@@ -534,15 +547,13 @@ impl PerformanceProfiler {
             total_functions: 25,
             call_depth: 8,
             recursive_calls: 2,
-            function_calls: vec![
-                FunctionCall {
-                    function_name: "main".to_string(),
-                    caller: None,
-                    call_count: 1,
-                    total_time_ns: 100_000_000,
-                    avg_time_ns: 100_000_000,
-                }
-            ],
+            function_calls: vec![FunctionCall {
+                function_name: "main".to_string(),
+                caller: None,
+                call_count: 1,
+                total_time_ns: 100_000_000,
+                avg_time_ns: 100_000_000,
+            }],
         };
 
         Ok(ProfilingData {
@@ -554,7 +565,10 @@ impl PerformanceProfiler {
     }
 
     /// Identify performance bottlenecks
-    async fn identify_bottlenecks(&self, profiling_data: &ProfilingData) -> Result<Vec<PerformanceBottleneck>> {
+    async fn identify_bottlenecks(
+        &self,
+        profiling_data: &ProfilingData,
+    ) -> Result<Vec<PerformanceBottleneck>> {
         let mut bottlenecks = Vec::new();
 
         // Check for CPU bottlenecks
@@ -577,7 +591,8 @@ impl PerformanceProfiler {
                 location: "Memory allocation".to_string(),
                 description: "High memory usage detected".to_string(),
                 impact_percent: 30.0,
-                suggested_fix: "Optimize memory allocation patterns or implement memory pooling".to_string(),
+                suggested_fix: "Optimize memory allocation patterns or implement memory pooling"
+                    .to_string(),
             });
         }
 
@@ -587,7 +602,10 @@ impl PerformanceProfiler {
                 bottleneck_type: BottleneckType::MemoryLeak,
                 severity: BottleneckSeverity::Critical,
                 location: "Memory management".to_string(),
-                description: format!("{} memory leaks detected", profiling_data.memory_profile.memory_leaks.len()),
+                description: format!(
+                    "{} memory leaks detected",
+                    profiling_data.memory_profile.memory_leaks.len()
+                ),
                 impact_percent: 50.0,
                 suggested_fix: "Fix memory leaks by ensuring proper deallocation".to_string(),
             });
@@ -601,7 +619,8 @@ impl PerformanceProfiler {
                 location: "I/O operations".to_string(),
                 description: "High I/O wait time detected".to_string(),
                 impact_percent: 25.0,
-                suggested_fix: "Optimize I/O operations with buffering or async processing".to_string(),
+                suggested_fix: "Optimize I/O operations with buffering or async processing"
+                    .to_string(),
             });
         }
 
@@ -622,7 +641,9 @@ impl PerformanceProfiler {
                 recommendation_type: RecommendationType::AlgorithmOptimization,
                 priority: RecommendationPriority::High,
                 title: "Optimize CPU-intensive algorithms".to_string(),
-                description: "High CPU usage detected. Consider optimizing hot functions and algorithms.".to_string(),
+                description:
+                    "High CPU usage detected. Consider optimizing hot functions and algorithms."
+                        .to_string(),
                 expected_improvement_percent: 25.0,
                 implementation_effort: ImplementationEffort::Medium,
             });
@@ -634,7 +655,9 @@ impl PerformanceProfiler {
                 recommendation_type: RecommendationType::MemoryOptimization,
                 priority: RecommendationPriority::Medium,
                 title: "Implement memory optimization".to_string(),
-                description: "High memory usage detected. Consider memory pooling or reducing allocations.".to_string(),
+                description:
+                    "High memory usage detected. Consider memory pooling or reducing allocations."
+                        .to_string(),
                 expected_improvement_percent: 20.0,
                 implementation_effort: ImplementationEffort::Medium,
             });
@@ -646,7 +669,9 @@ impl PerformanceProfiler {
                 recommendation_type: RecommendationType::CachingStrategy,
                 priority: RecommendationPriority::Medium,
                 title: "Implement caching strategy".to_string(),
-                description: "High file I/O detected. Consider implementing caching to reduce disk access.".to_string(),
+                description:
+                    "High file I/O detected. Consider implementing caching to reduce disk access."
+                        .to_string(),
                 expected_improvement_percent: 30.0,
                 implementation_effort: ImplementationEffort::Low,
             });
@@ -658,7 +683,9 @@ impl PerformanceProfiler {
                 recommendation_type: RecommendationType::ParallelProcessing,
                 priority: RecommendationPriority::Low,
                 title: "Consider parallel processing".to_string(),
-                description: "Deep call stack detected. Some operations might benefit from parallelization.".to_string(),
+                description:
+                    "Deep call stack detected. Some operations might benefit from parallelization."
+                        .to_string(),
                 expected_improvement_percent: 40.0,
                 implementation_effort: ImplementationEffort::High,
             });
