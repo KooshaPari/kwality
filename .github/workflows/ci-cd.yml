@@ -35,7 +35,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
@@ -46,7 +46,6 @@ jobs:
         with:
           config: auto
           publishToken: ${{ secrets.SEMGREP_APP_TOKEN }}
-          generateBaseline: true
 
   # Go backend testing and analysis
   go-test:
@@ -185,10 +184,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install Docker (for integration tests)
+      - name: Setup Docker (for integration tests)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker.io
           sudo systemctl start docker
           sudo usermod -aG docker $USER
 
@@ -502,8 +499,9 @@ jobs:
         with:
           status: failure
           channel: '#kwality-alerts'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
 
   # Generate release notes
   release-notes:
