@@ -1,0 +1,1 @@
+Pin<Box<(dyn futures_core::stream::Stream<Item = Result<LogOutput, bollard::errors::Error>> + Send + 'static)>>

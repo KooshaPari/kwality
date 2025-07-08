@@ -54,7 +54,7 @@ pub struct ValidationProgress {
 }
 
 /// Validation phases
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum ValidationPhase {
     Initialization,
     EnvironmentSetup,
@@ -210,10 +210,11 @@ impl ValidationOrchestrator {
         // Start validation in background
         let orchestrator = self.clone();
         let codebase_clone = codebase.clone();
+        let validation_id_clone = validation_id.clone();
         tokio::spawn(async move {
-            if let Err(e) = orchestrator.execute_validation(&validation_id, &codebase_clone).await {
+            if let Err(e) = orchestrator.execute_validation(&validation_id_clone, &codebase_clone).await {
                 error!("Validation failed: {}", e);
-                orchestrator.mark_validation_failed(&validation_id, &e.to_string()).await;
+                orchestrator.mark_validation_failed(&validation_id_clone, &e.to_string()).await;
             }
         });
 

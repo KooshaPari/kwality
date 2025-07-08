@@ -184,20 +184,16 @@ jobs:
 
       - name: Run Rust formatter check
         working-directory: engines/runtime-validator
-        continue-on-error: true
         run: cargo fmt --all -- --check
 
       - name: Run Rust linter
         working-directory: engines/runtime-validator
-        continue-on-error: true
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -W warnings
 
-      - name: Run Rust tests
+      - name: Build Rust release
         working-directory: engines/runtime-validator
-        continue-on-error: true
         run: |
-          cargo test --verbose
-          cargo test --verbose --release
+          cargo build --release --verbose
 
       - name: Run Rust security audit
         working-directory: engines/runtime-validator
@@ -217,14 +213,13 @@ jobs:
   build-images:
     name: Build Docker Images
     runs-on: ubuntu-latest
-    needs: [security-scan, go-test]
-    if: always() && !cancelled() && (needs.security-scan.result == 'success' || needs.security-scan.result == 'failure') && (needs.go-test.result == 'success' || needs.go-test.result == 'failure')
+    needs: [security-scan, go-test, rust-test]
     permissions:
       contents: read
       packages: write
     outputs:
       orchestrator-image: ${{ steps.meta-orchestrator.outputs.tags }}
-      # runtime-validator-image: ${{ steps.meta-runtime.outputs.tags }}
+      runtime-validator-image: ${{ steps.meta-runtime.outputs.tags }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -264,31 +259,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Temporarily disabled due to Rust compilation issues
-      # - name: Extract Rust runtime validator metadata
-      #   id: meta-runtime
-      #   uses: docker/metadata-action@v5
-      #   with:
-      #     images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/runtime-validator
-      #     tags: |
-      #       type=ref,event=branch
-      #       type=ref,event=pr
-      #       type=semver,pattern={{version}}
-      #       type=semver,pattern={{major}}.{{minor}}
-      #       type=sha,prefix={{branch}}-
+      # Build Rust runtime validator image
+      - name: Extract Rust runtime validator metadata
+        id: meta-runtime
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/runtime-validator
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
 
-      # Temporarily disabled due to Rust compilation issues
-      # - name: Build and push Rust runtime validator image
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: ./engines/runtime-validator
-      #     file: ./engines/runtime-validator/Dockerfile
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: ${{ steps.meta-runtime.outputs.tags }}
-      #     labels: ${{ steps.meta-runtime.outputs.labels }}
-      #     cache-from: type=gha
-      #     cache-to: type=gha,mode=max
+      - name: Build and push Rust runtime validator image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./engines/runtime-validator
+          file: ./engines/runtime-validator/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-runtime.outputs.tags }}
+          labels: ${{ steps.meta-runtime.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # End-to-end testing
   e2e-test:
@@ -337,12 +331,11 @@ jobs:
       - name: Update Docker Compose with built images
         run: |
           sed -i "s|kwality/orchestrator:latest|${{ needs.build-images.outputs.orchestrator-image }}|g" docker-compose.kwality.yml
-          # Runtime validator temporarily disabled due to compilation issues
-          # sed -i "s|kwality/runtime-validator:latest|${{ needs.build-images.outputs.runtime-validator-image }}|g" docker-compose.kwality.yml
+          sed -i "s|kwality/runtime-validator:latest|${{ needs.build-images.outputs.runtime-validator-image }}|g" docker-compose.kwality.yml
 
       - name: Start services
         run: |
-          docker-compose -f docker-compose.kwality.yml up -d kwality-orchestrator postgres redis
+          docker-compose -f docker-compose.kwality.yml up -d kwality-orchestrator kwality-runtime-validator postgres redis
           sleep 30
 
       - name: Wait for services to be ready
@@ -491,7 +484,7 @@ jobs:
   notify-failure:
     name: Notify on Failure
     runs-on: ubuntu-latest
-    needs: [security-scan, go-test, build-images, e2e-test]
+    needs: [security-scan, go-test, rust-test, build-images, e2e-test]
     if: failure()
     steps:
       - name: Notify Slack on failure

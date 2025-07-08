@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use sysinfo::{System, SystemExt, ProcessExt, PidExt};
+use sysinfo::{System, SystemExt, ProcessExt, PidExt, CpuExt};
 use tracing::{debug, info, warn};
 
 use crate::{PerformanceConfig, PerformanceThresholds};

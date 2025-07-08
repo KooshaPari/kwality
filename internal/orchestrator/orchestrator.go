@@ -32,6 +32,7 @@ type Config struct {
 	Logger        logger.Logger
 	MaxWorkers    int
 	QueueSize     int
+	WorkerTimeout time.Duration
 	ResultStorage string
 }
 
@@ -258,6 +259,11 @@ func (o *Orchestrator) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// Shutdown is an alias for Stop for compatibility
+func (o *Orchestrator) Shutdown(ctx context.Context) error {
+	return o.Stop(ctx)
 }
 
 // SubmitValidation submits a new validation task

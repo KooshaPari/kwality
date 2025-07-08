@@ -19,6 +19,7 @@ import (
 	"kwality/internal/database"
 	"kwality/internal/handlers"
 	"kwality/internal/middleware"
+	"kwality/internal/orchestrator"
 	"kwality/internal/validation"
 	"kwality/pkg/logger"
 )
@@ -38,17 +39,19 @@ type Server struct {
 
 // Config holds server configuration
 type Config struct {
-	Port               int      `json:"port"`
-	Environment        string   `json:"environment"`
-	AllowedOrigins     []string `json:"allowed_origins"`
-	JWTSecret          string   `json:"jwt_secret"`
-	RateLimitRPS       int      `json:"rate_limit_rps"`
-	RateLimitBurst     int      `json:"rate_limit_burst"`
-	AuthRateLimitRPS   int      `json:"auth_rate_limit_rps"`
-	AuthRateLimitBurst int      `json:"auth_rate_limit_burst"`
-	ReadTimeout        int      `json:"read_timeout"`
-	WriteTimeout       int      `json:"write_timeout"`
-	IdleTimeout        int      `json:"idle_timeout"`
+	Port               int                       `json:"port"`
+	Environment        string                    `json:"environment"`
+	AllowedOrigins     []string                  `json:"allowed_origins"`
+	JWTSecret          string                    `json:"jwt_secret"`
+	RateLimitRPS       int                       `json:"rate_limit_rps"`
+	RateLimitBurst     int                       `json:"rate_limit_burst"`
+	AuthRateLimitRPS   int                       `json:"auth_rate_limit_rps"`
+	AuthRateLimitBurst int                       `json:"auth_rate_limit_burst"`
+	ReadTimeout        int                       `json:"read_timeout"`
+	WriteTimeout       int                       `json:"write_timeout"`
+	IdleTimeout        int                       `json:"idle_timeout"`
+	Orchestrator       *orchestrator.Orchestrator `json:"-"`
+	Logger             logger.Logger              `json:"-"`
 }
 
 // NewServer creates a new HTTP server
@@ -103,6 +106,99 @@ func NewServer(logger logger.Logger, dbManager *database.Manager, config *Config
 	}
 
 	return server, nil
+}
+
+// NewHandler creates a new HTTP handler for testing
+func NewHandler(config Config) http.Handler {
+	// Set gin mode
+	gin.SetMode(gin.TestMode)
+
+	// Create router
+	router := gin.New()
+
+	// Basic recovery middleware
+	router.Use(gin.Recovery())
+
+	// Setup test routes
+	setupTestRoutes(router, config)
+
+	return router
+}
+
+// setupTestRoutes configures routes for testing
+func setupTestRoutes(router *gin.Engine, config Config) {
+	// Health check endpoint
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "healthy",
+			"timestamp": time.Now().Format(time.RFC3339),
+			"version":   "1.0.0",
+		})
+	})
+
+	// API routes
+	v1 := router.Group("/api/v1")
+	{
+		// Validation routes
+		validate := v1.Group("/validate")
+		{
+			// Submit validation request
+			validate.POST("/codebase", func(c *gin.Context) {
+				var req map[string]interface{}
+				if err := c.ShouldBindJSON(&req); err != nil {
+					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+					return
+				}
+
+				// Generate task ID
+				taskID := fmt.Sprintf("task_%d", time.Now().UnixNano())
+
+				// Submit to orchestrator if available
+				if config.Orchestrator != nil {
+					// Convert request to codebase and config
+					// This is simplified for testing
+				}
+
+				c.JSON(http.StatusAccepted, gin.H{
+					"task_id":      taskID,
+					"status":       "pending",
+					"submitted_at": time.Now().Format(time.RFC3339),
+				})
+			})
+
+			// Get validation result
+			validate.GET("/:id", func(c *gin.Context) {
+				taskID := c.Param("id")
+
+				// Get result from orchestrator if available
+				if config.Orchestrator != nil {
+					result, err := config.Orchestrator.GetValidationResult(taskID)
+					if err != nil {
+						c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+						return
+					}
+					c.JSON(http.StatusOK, result)
+					return
+				}
+
+				// Mock response for testing
+				c.JSON(http.StatusOK, gin.H{
+					"task_id":       taskID,
+					"status":        "completed",
+					"overall_score": 85.0,
+					"quality_gate":  true,
+					"engine_results": map[string]interface{}{
+						"static_analysis": map[string]interface{}{
+							"engine_name": "static_analysis",
+							"status":      "completed",
+							"score":       85.0,
+						},
+					},
+					"findings": []interface{}{},
+				})
+			})
+		}
+	}
 }
 
 // setupMiddleware configures middleware

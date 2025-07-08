@@ -55,7 +55,7 @@ func (suite *ValidationPipelineTestSuite) SetupSuite() {
 
 	// Initialize orchestrator
 	suite.orchestrator, err = orchestrator.New(orchestrator.Config{
-		MaxWorkers:     2,
+		MaxWorkers:    2,
 		QueueSize:     10,
 		WorkerTimeout: 30 * time.Second,
 		Logger:        suite.logger,
@@ -108,7 +108,7 @@ func (suite *ValidationPipelineTestSuite) TestValidateCodebaseEndpoint() {
 	codebase := models.ValidationRequest{
 		Name: "test-go-service",
 		Source: models.CodebaseSource{
-			Type: "inline",
+			Type: models.SourceTypeInline,
 			Files: []models.SourceFile{
 				{
 					Path:    "main.go",
@@ -173,7 +173,7 @@ func (suite *ValidationPipelineTestSuite) TestValidateWithInvalidCode() {
 	codebase := models.ValidationRequest{
 		Name: "test-invalid-code",
 		Source: models.CodebaseSource{
-			Type: "inline",
+			Type: models.SourceTypeInline,
 			Files: []models.SourceFile{
 				{
 					Path:    "main.go",
@@ -204,7 +204,7 @@ func (suite *ValidationPipelineTestSuite) TestValidateMultiLanguageCodebase() {
 	codebase := models.ValidationRequest{
 		Name: "test-multi-language",
 		Source: models.CodebaseSource{
-			Type: "inline",
+			Type: models.SourceTypeInline,
 			Files: []models.SourceFile{
 				{
 					Path:    "main.go",
@@ -248,7 +248,7 @@ func (suite *ValidationPipelineTestSuite) TestValidationTimeout() {
 	codebase := models.ValidationRequest{
 		Name: "test-timeout",
 		Source: models.CodebaseSource{
-			Type: "inline",
+			Type: models.SourceTypeInline,
 			Files: []models.SourceFile{
 				{
 					Path:    "infinite.go",
@@ -280,7 +280,7 @@ func (suite *ValidationPipelineTestSuite) TestConcurrentValidations() {
 		codebase := models.ValidationRequest{
 			Name: fmt.Sprintf("test-concurrent-%d", i),
 			Source: models.CodebaseSource{
-				Type: "inline",
+				Type: models.SourceTypeInline,
 				Files: []models.SourceFile{
 					{
 						Path:    "main.go",

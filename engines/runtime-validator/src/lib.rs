@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 use tokio::time::timeout;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
+use sysinfo::SystemExt;
 
 pub mod container;
 pub mod performance;
@@ -480,9 +481,27 @@ impl RuntimeValidator {
         }
 
         // Step 8: Analyze execution results
-        self.analyze_execution_results(&execution_result, result)
-            .await
-            .context("Failed to analyze execution results")?;
+        match &execution_result {
+            Ok(exec_result) => {
+                self.analyze_execution_results(exec_result, result)
+                    .await
+                    .context("Failed to analyze execution results")?;
+            }
+            Err(e) => {
+                // Handle execution failure
+                result.findings.push(Finding {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    finding_type: FindingType::RuntimeError,
+                    severity: Severity::Critical,
+                    title: "Code Execution Failed".to_string(),
+                    description: format!("Failed to execute code: {}", e),
+                    file: None,
+                    line: None,
+                    evidence: HashMap::new(),
+                    confidence: 1.0,
+                });
+            }
+        }
 
         // Step 9: Cleanup
         if self.config.validation.cleanup_after_validation {
@@ -526,10 +545,12 @@ impl RuntimeValidator {
         self.analyze_stderr(&execution_result.stderr, result);
 
         // Analyze performance issues
-        self.analyze_performance_issues(&result.performance_metrics, result);
+        let performance_metrics = result.performance_metrics.clone();
+        self.analyze_performance_issues(&performance_metrics, result);
 
         // Analyze security issues
-        self.analyze_security_issues(&result.security_result, result);
+        let security_result = result.security_result.clone();
+        self.analyze_security_issues(&security_result, result);
 
         Ok(())
     }

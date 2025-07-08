@@ -12,6 +12,7 @@ use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
 use bollard::models::{ContainerCreateResponse, ContainerWaitResponse, HostConfig, Mount, MountTypeEnum};
 use bollard::Docker;
+use futures_util::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::default::Default;
@@ -33,7 +34,7 @@ pub struct ContainerManager {
 }
 
 /// Execution environment for a codebase
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ExecutionEnvironment {
     pub id: String,
     pub container_id: Option<String>,
@@ -343,7 +344,7 @@ impl ContainerManager {
                 Some("bridge".to_string())
             },
             mounts: Some(vec![mount]),
-            read_only_root_fs: Some(self.config.readonly_filesystem),
+            readonly_rootfs: Some(self.config.readonly_filesystem),
             security_opt: Some(self.config.security_opts.clone()),
             tmpfs: Some({
                 let mut tmpfs = HashMap::new();
@@ -538,8 +539,9 @@ impl ContainerManager {
             let memory_limit_mb = stat.memory_stats.limit.unwrap_or(0) / (1024 * 1024);
             
             // Calculate CPU usage percentage
-            let cpu_usage_percent = if let (Some(cpu_stats), Some(precpu_stats)) = 
-                (&stat.cpu_stats, &stat.precpu_stats) {
+            let cpu_usage_percent = {
+                let cpu_stats = &stat.cpu_stats;
+                let precpu_stats = &stat.precpu_stats;
                 let cpu_delta = cpu_stats.cpu_usage.total_usage as f64 - 
                                precpu_stats.cpu_usage.total_usage as f64;
                 let system_delta = cpu_stats.system_cpu_usage.unwrap_or(0) as f64 - 
@@ -550,8 +552,6 @@ impl ContainerManager {
                 } else {
                     0.0
                 }
-            } else {
-                0.0
             };
 
             Ok(ResourceUsage {

@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
 
@@ -18,8 +19,8 @@ use crate::container::ExecutionEnvironment;
 pub struct FuzzingEngine {
     config: FuzzingConfig,
     input_generators: Vec<Box<dyn InputGenerator>>,
-    coverage_tracker: CoverageTracker,
-    crash_detector: CrashDetector,
+    coverage_tracker: Mutex<CoverageTracker>,
+    crash_detector: Mutex<CrashDetector>,
 }
 
 /// Result of fuzzing execution
@@ -201,8 +202,8 @@ impl FuzzingEngine {
         Ok(Self {
             config,
             input_generators,
-            coverage_tracker,
-            crash_detector,
+            coverage_tracker: Mutex::new(coverage_tracker),
+            crash_detector: Mutex::new(crash_detector),
         })
     }
 
@@ -239,7 +240,7 @@ impl FuzzingEngine {
             result.total_executions += 1;
 
             // Check for crashes
-            if let Some(crash) = self.crash_detector.analyze_execution(&execution_result)? {
+            if let Some(crash) = self.crash_detector.lock().unwrap().analyze_execution(&execution_result)? {
                 result.crashes_found += 1;
                 if self.is_unique_crash(&crash, &result.crashes) {
                     result.unique_crashes += 1;
@@ -249,7 +250,7 @@ impl FuzzingEngine {
 
             // Update coverage if enabled
             if self.config.coverage_guided {
-                let coverage_change = self.coverage_tracker.update_coverage(&execution_result)?;
+                let coverage_change = self.coverage_tracker.lock().unwrap().update_coverage(&execution_result)?;
                 if coverage_change > 0.0 {
                     result.interesting_inputs.push(InterestingInput {
                         input_data: input.clone(),
@@ -273,8 +274,8 @@ impl FuzzingEngine {
         }
 
         result.execution_time = start_time.elapsed();
-        result.coverage_percentage = self.coverage_tracker.get_coverage_percentage();
-        result.coverage_info = self.coverage_tracker.get_coverage_info();
+        result.coverage_percentage = self.coverage_tracker.lock().unwrap().get_coverage_percentage();
+        result.coverage_info = self.coverage_tracker.lock().unwrap().get_coverage_info();
 
         info!(
             "Fuzzing campaign completed: {} executions, {} crashes found, {:.1}% coverage",

@@ -308,7 +308,7 @@ impl MetricsCollector {
 
         // Update resource utilization
         metrics.resource_utilization.cpu_cores_used = cpu_usage / 100.0 * num_cpus::get() as f64;
-        metrics.resource_utilization.memory_efficiency = memory_usage as f64 / (8 * 1024.0); // Assume 8GB total
+        metrics.resource_utilization.memory_efficiency = memory_usage as f64 / (8.0 * 1024.0); // Assume 8GB total
         
         // Record time series data
         if let Ok(mut buffer) = self.time_series_buffer.lock() {
@@ -567,19 +567,47 @@ impl TimeSeriesBuffer {
     }
 
     fn add_validation_time(&mut self, time_ms: f64) {
-        self.add_point(&mut self.validation_times, time_ms);
+        let point = TimeSeriesPoint {
+            timestamp: SystemTime::now(),
+            value: time_ms,
+        };
+        self.validation_times.push_back(point);
+        if self.validation_times.len() > self.max_points {
+            self.validation_times.pop_front();
+        }
     }
 
     fn add_cpu_usage(&mut self, usage: f64) {
-        self.add_point(&mut self.cpu_usage, usage);
+        let point = TimeSeriesPoint {
+            timestamp: SystemTime::now(),
+            value: usage,
+        };
+        self.cpu_usage.push_back(point);
+        if self.cpu_usage.len() > self.max_points {
+            self.cpu_usage.pop_front();
+        }
     }
 
     fn add_memory_usage(&mut self, usage: f64) {
-        self.add_point(&mut self.memory_usage, usage);
+        let point = TimeSeriesPoint {
+            timestamp: SystemTime::now(),
+            value: usage,
+        };
+        self.memory_usage.push_back(point);
+        if self.memory_usage.len() > self.max_points {
+            self.memory_usage.pop_front();
+        }
     }
 
     fn add_error_rate(&mut self, rate: f64) {
-        self.add_point(&mut self.error_rates, rate);
+        let point = TimeSeriesPoint {
+            timestamp: SystemTime::now(),
+            value: rate,
+        };
+        self.error_rates.push_back(point);
+        if self.error_rates.len() > self.max_points {
+            self.error_rates.pop_front();
+        }
     }
 
     fn add_point(&mut self, series: &mut VecDeque<TimeSeriesPoint>, value: f64) {

@@ -737,7 +737,7 @@ impl VulnerabilityScanner {
 
     /// Scan a file for vulnerabilities
     pub async fn scan_file(&self, file: &crate::CodeFile) -> Result<()> {
-        let content = String::from_utf8_lossy(&file.content);
+        let content = &file.content;
         
         for (_, pattern) in &self.vulnerability_db {
             if pattern.pattern.is_match(&content) {
@@ -775,13 +775,13 @@ impl SecretsDetector {
         let secret_patterns = vec![
             SecretPattern {
                 name: "API Key".to_string(),
-                pattern: Regex::new(r"(?i)(api[_-]?key|apikey)\s*[:=]\s*['\"]?([a-zA-Z0-9_-]{16,})['\"]?").unwrap(),
+                pattern: Regex::new(r"(?i)(api[_-]?key|apikey)\s*[:=]\s*['\x22]?([a-zA-Z0-9_-]{16,})['\x22]?").unwrap(),
                 secret_type: SecretType::ApiKey,
                 confidence: 0.8,
             },
             SecretPattern {
                 name: "Password".to_string(),
-                pattern: Regex::new(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?([^'\"\\s]{8,})['\"]?").unwrap(),
+                pattern: Regex::new(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\x22]?([^'\x22\s]{8,})['\x22]?").unwrap(),
                 secret_type: SecretType::Password,
                 confidence: 0.7,
             },
@@ -798,7 +798,7 @@ impl SecretsDetector {
 
     /// Scan a file for secrets
     pub async fn scan_file(&self, file: &crate::CodeFile) -> Result<()> {
-        let content = String::from_utf8_lossy(&file.content);
+        let content = &file.content;
         
         for pattern in &self.secret_patterns {
             if pattern.pattern.is_match(&content) {
