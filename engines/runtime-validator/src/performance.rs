@@ -3,15 +3,15 @@
 //! This module provides comprehensive performance analysis including CPU profiling,
 //! memory analysis, I/O monitoring, and benchmarking capabilities.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use sysinfo::{CpuExt, PidExt, ProcessExt, System, SystemExt};
-use tracing::{debug, info, warn};
+use sysinfo::{CpuExt, ProcessExt, System, SystemExt};
+use tracing::{debug, info};
 
 use crate::container::ExecutionEnvironment;
-use crate::{PerformanceConfig, PerformanceThresholds};
+use crate::PerformanceConfig;
 
 /// Performance profiler for code execution
 #[derive(Debug)]

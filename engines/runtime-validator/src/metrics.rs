@@ -7,9 +7,9 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Metrics collector for validation operations
 #[derive(Debug)]
@@ -458,50 +458,38 @@ impl MetricsCollector {
         let mut output = String::new();
 
         // Validation metrics
-        output.push_str(&format!(
-            "# HELP kwality_validations_total Total number of validations performed\n"
-        ));
-        output.push_str(&format!("# TYPE kwality_validations_total counter\n"));
+        output.push_str("# HELP kwality_validations_total Total number of validations performed\n");
+        output.push_str("# TYPE kwality_validations_total counter\n");
         output.push_str(&format!(
             "kwality_validations_total {}\n",
             validation_metrics.total_validations
         ));
 
-        output.push_str(&format!(
-            "# HELP kwality_validation_duration_seconds Average validation duration\n"
-        ));
-        output.push_str(&format!(
-            "# TYPE kwality_validation_duration_seconds gauge\n"
-        ));
+        output.push_str("# HELP kwality_validation_duration_seconds Average validation duration\n");
+        output.push_str("# TYPE kwality_validation_duration_seconds gauge\n");
         output.push_str(&format!(
             "kwality_validation_duration_seconds {:.3}\n",
             validation_metrics.avg_validation_time.as_secs_f64()
         ));
 
         // Performance metrics
-        output.push_str(&format!(
-            "# HELP kwality_cpu_usage_percent Current CPU usage percentage\n"
-        ));
-        output.push_str(&format!("# TYPE kwality_cpu_usage_percent gauge\n"));
+        output.push_str("# HELP kwality_cpu_usage_percent Current CPU usage percentage\n");
+        output.push_str("# TYPE kwality_cpu_usage_percent gauge\n");
         output.push_str(&format!(
             "kwality_cpu_usage_percent {:.2}\n",
             performance_metrics.cpu_usage_percent
         ));
 
-        output.push_str(&format!(
-            "# HELP kwality_memory_usage_mb Current memory usage in MB\n"
-        ));
-        output.push_str(&format!("# TYPE kwality_memory_usage_mb gauge\n"));
+        output.push_str("# HELP kwality_memory_usage_mb Current memory usage in MB\n");
+        output.push_str("# TYPE kwality_memory_usage_mb gauge\n");
         output.push_str(&format!(
             "kwality_memory_usage_mb {}\n",
             performance_metrics.memory_usage_mb
         ));
 
         // System metrics
-        output.push_str(&format!(
-            "# HELP kwality_active_workers Number of active worker processes\n"
-        ));
-        output.push_str(&format!("# TYPE kwality_active_workers gauge\n"));
+        output.push_str("# HELP kwality_active_workers Number of active worker processes\n");
+        output.push_str("# TYPE kwality_active_workers gauge\n");
         output.push_str(&format!(
             "kwality_active_workers {}\n",
             system_metrics.active_workers

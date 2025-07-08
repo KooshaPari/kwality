@@ -3,13 +3,13 @@
 //! This module provides fuzzing capabilities to test code robustness by generating
 //! random inputs and monitoring program behavior under stress conditions.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::container::ExecutionEnvironment;
 use crate::{FuzzingConfig, FuzzingStrategy};
@@ -89,6 +89,7 @@ pub struct InterestingInput {
 
 /// Code coverage information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct CoverageInfo {
     pub lines_covered: u32,
     pub total_lines: u32,
@@ -758,19 +759,6 @@ impl CrashDetector {
     }
 }
 
-impl Default for CoverageInfo {
-    fn default() -> Self {
-        Self {
-            lines_covered: 0,
-            total_lines: 0,
-            functions_covered: 0,
-            total_functions: 0,
-            branches_covered: 0,
-            total_branches: 0,
-            coverage_map: HashMap::new(),
-        }
-    }
-}
 
 impl Default for FuzzingResult {
     fn default() -> Self {

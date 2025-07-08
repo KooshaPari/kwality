@@ -6,12 +6,12 @@
 use anyhow::{Context, Result};
 use bollard::container::{
     Config, CreateContainerOptions, RemoveContainerOptions, StartContainerOptions,
-    StopContainerOptions, WaitContainerOptions,
+    StopContainerOptions,
 };
 use bollard::exec::{CreateExecOptions, StartExecResults};
 use bollard::image::CreateImageOptions;
 use bollard::models::{
-    ContainerCreateResponse, ContainerWaitResponse, HostConfig, Mount, MountTypeEnum,
+    ContainerCreateResponse, HostConfig, Mount, MountTypeEnum,
 };
 use bollard::Docker;
 use futures_util::TryStreamExt;
@@ -22,7 +22,6 @@ use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tempfile::TempDir;
 use tokio::fs;
-use tokio::io::AsyncWriteExt;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
@@ -203,7 +202,7 @@ impl ContainerManager {
             Err(e) => {
                 error!("Command execution failed: {}", e);
                 result.exit_code = -1;
-                result.stderr = format!("Execution failed: {}", e);
+                result.stderr = format!("Execution failed: {e}");
             }
         }
 
@@ -281,7 +280,7 @@ impl ContainerManager {
             Err(e) => {
                 status.insert(
                     "docker_daemon".to_string(),
-                    serde_json::Value::String(format!("unhealthy: {}", e)),
+                    serde_json::Value::String(format!("unhealthy: {e}")),
                 );
             }
         }
@@ -412,7 +411,7 @@ impl ContainerManager {
                 self.config
                     .environment
                     .iter()
-                    .map(|(k, v)| format!("{}={}", k, v))
+                    .map(|(k, v)| format!("{k}={v}"))
                     .collect(),
             ),
             host_config: Some(host_config),

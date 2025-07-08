@@ -13,8 +13,8 @@ use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::container::{ContainerManager, ExecutionEnvironment, ExecutionResult};
-use crate::fuzzing::{FuzzingEngine, FuzzingResult};
+use crate::container::{ContainerManager, ExecutionEnvironment};
+use crate::fuzzing::FuzzingEngine;
 use crate::metrics::{ContainerEvent, ErrorSeverity, MetricsCollector};
 use crate::performance::{PerformanceMetrics, PerformanceProfiler};
 use crate::security::{SecurityMonitor, SecurityResult};
@@ -251,7 +251,7 @@ impl ValidationOrchestrator {
     pub async fn cancel_validation(&self, validation_id: &str) -> Result<()> {
         let mut active_validations = self.active_validations.write().await;
 
-        if let Some(mut session) = active_validations.get_mut(validation_id) {
+        if let Some(session) = active_validations.get_mut(validation_id) {
             session.status = ValidationStatus::Cancelled;
             info!("Validation cancelled: {}", validation_id);
         }

@@ -7,10 +7,9 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
-use crate::container::{ExecutionEnvironment, SecurityEvent};
+use crate::container::ExecutionEnvironment;
 use crate::{Codebase, SecurityConfig};
 
 /// Security monitor for code execution
@@ -680,8 +679,7 @@ impl SecurityMonitor {
                 severity: ViolationSeverity::High,
                 title: "Sensitive file access".to_string(),
                 description: format!(
-                    "Code attempted to access sensitive file: {}",
-                    sensitive_file
+                    "Code attempted to access sensitive file: {sensitive_file}"
                 ),
                 timestamp: chrono::Utc::now(),
                 location: Some(sensitive_file.clone()),
@@ -727,7 +725,7 @@ impl SyscallMonitor {
                 violation_type: ViolationType::UnauthorizedSyscall,
                 severity: ViolationSeverity::High,
                 title: "Blocked syscall attempted".to_string(),
-                description: format!("Code attempted to use blocked syscall: {}", blocked_syscall),
+                description: format!("Code attempted to use blocked syscall: {blocked_syscall}"),
                 timestamp: chrono::Utc::now(),
                 location: None,
                 evidence: HashMap::new(),
@@ -774,8 +772,8 @@ impl VulnerabilityScanner {
     pub async fn scan_file(&self, file: &crate::CodeFile) -> Result<()> {
         let content = &file.content;
 
-        for (_, pattern) in &self.vulnerability_db {
-            if pattern.pattern.is_match(&content) {
+        for pattern in self.vulnerability_db.values() {
+            if pattern.pattern.is_match(content) {
                 debug!(
                     "Vulnerability pattern '{}' found in file: {}",
                     pattern.name, file.path
@@ -843,7 +841,7 @@ impl SecretsDetector {
         let content = &file.content;
 
         for pattern in &self.secret_patterns {
-            if pattern.pattern.is_match(&content) {
+            if pattern.pattern.is_match(content) {
                 debug!(
                     "Secret pattern '{}' found in file: {}",
                     pattern.name, file.path

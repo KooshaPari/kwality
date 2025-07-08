@@ -4,7 +4,6 @@ use kwality_runtime_validator::{Codebase, RuntimeConfig, RuntimeValidator};
 use std::fs;
 use std::path::PathBuf;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
