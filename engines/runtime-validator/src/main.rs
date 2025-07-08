@@ -97,11 +97,7 @@ async fn main() -> Result<()> {
     if !result.findings.is_empty() {
         println!("\n🚨 Key Findings:");
         for finding in result.findings.iter().take(5) {
-            println!(
-                "  • {} ({:?})",
-                finding.title,
-                finding.severity
-            );
+            println!("  • {} ({:?})", finding.title, finding.severity);
         }
     }
 
