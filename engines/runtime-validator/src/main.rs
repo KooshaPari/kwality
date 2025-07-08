@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::{Arg, Command};
 use kwality_runtime_validator::{Codebase, RuntimeConfig, RuntimeValidator};
-use serde_json;
 use std::fs;
 use std::path::PathBuf;
 use tracing::{info, Level};
@@ -99,9 +98,9 @@ async fn main() -> Result<()> {
         println!("\n🚨 Key Findings:");
         for finding in result.findings.iter().take(5) {
             println!(
-                "  • {} ({})",
+                "  • {} ({:?})",
                 finding.title,
-                format!("{:?}", finding.severity)
+                finding.severity
             );
         }
     }
@@ -109,11 +108,11 @@ async fn main() -> Result<()> {
     if !result.recommendations.is_empty() {
         println!("\n💡 Top Recommendations:");
         for rec in result.recommendations.iter().take(3) {
-            println!("  • {} ({})", rec.title, format!("{:?}", rec.priority));
+            println!("  • {} ({:?})", rec.title, rec.priority);
         }
     }
 
-    println!("\n📄 Full results saved to: {}", output_path);
+    println!("\n📄 Full results saved to: {output_path}");
 
     Ok(())
 }

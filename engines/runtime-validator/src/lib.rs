@@ -4,14 +4,12 @@
 //! using containerized environments, performance profiling, and security monitoring.
 
 use anyhow::{Context, Result};
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use sysinfo::SystemExt;
 use tokio::time::timeout;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 pub mod container;
@@ -375,7 +373,7 @@ impl RuntimeValidator {
                         finding_type: FindingType::RuntimeError,
                         severity: Severity::Critical,
                         title: "Validation Execution Failed".to_string(),
-                        description: format!("Runtime validation failed: {}", e),
+                        description: format!("Runtime validation failed: {e}"),
                         file: None,
                         line: None,
                         evidence: HashMap::new(),
@@ -494,7 +492,7 @@ impl RuntimeValidator {
                     finding_type: FindingType::RuntimeError,
                     severity: Severity::Critical,
                     title: "Code Execution Failed".to_string(),
-                    description: format!("Failed to execute code: {}", e),
+                    description: format!("Failed to execute code: {e}"),
                     file: None,
                     line: None,
                     evidence: HashMap::new(),
@@ -605,10 +603,9 @@ impl RuntimeValidator {
                         id: Uuid::new_v4().to_string(),
                         finding_type,
                         severity,
-                        title: format!("Error Pattern Detected: {}", pattern),
+                        title: format!("Error Pattern Detected: {pattern}"),
                         description: format!(
-                            "Detected error pattern '{}' in program output",
-                            pattern
+                            "Detected error pattern '{pattern}' in program output"
                         ),
                         file: None,
                         line: None,
