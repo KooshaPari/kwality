@@ -11,7 +11,7 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   GO_VERSION: '1.23'
-  RUST_VERSION: '1.75'
+  RUST_VERSION: '1.80'
 
 jobs:
   # Static analysis and security scanning
