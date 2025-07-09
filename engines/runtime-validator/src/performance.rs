@@ -7,7 +7,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use sysinfo::{CpuExt, ProcessExt, System, SystemExt};
+use sysinfo::{CpuExt, System, SystemExt};
 use tracing::{debug, info};
 
 use crate::container::ExecutionEnvironment;
@@ -17,6 +17,7 @@ use crate::PerformanceConfig;
 #[derive(Debug)]
 pub struct PerformanceProfiler {
     config: PerformanceConfig,
+    #[allow(dead_code)]
     system: System,
 }
 
@@ -359,7 +360,7 @@ impl PerformanceProfiler {
     /// Run performance benchmarks
     async fn run_benchmarks(
         &self,
-        env: &ExecutionEnvironment,
+        _env: &ExecutionEnvironment,
     ) -> Result<HashMap<String, BenchmarkResult>> {
         info!("Running performance benchmarks");
 
@@ -488,7 +489,7 @@ impl PerformanceProfiler {
     }
 
     /// Collect detailed profiling data
-    async fn collect_profiling_data(&self, env: &ExecutionEnvironment) -> Result<ProfilingData> {
+    async fn collect_profiling_data(&self, _env: &ExecutionEnvironment) -> Result<ProfilingData> {
         let cpu_profile = CpuProfile {
             total_cpu_time_ms: 100,
             user_cpu_time_ms: 80,
@@ -631,7 +632,7 @@ impl PerformanceProfiler {
     async fn generate_recommendations(
         &self,
         profiling_data: &ProfilingData,
-        bottlenecks: &[PerformanceBottleneck],
+        _bottlenecks: &[PerformanceBottleneck],
     ) -> Result<Vec<PerformanceRecommendation>> {
         let mut recommendations = Vec::new();
 

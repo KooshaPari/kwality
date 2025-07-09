@@ -3,7 +3,7 @@
 //! This module provides comprehensive security monitoring including syscall tracking,
 //! vulnerability detection, secrets scanning, and behavioral analysis.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -271,6 +271,7 @@ pub enum SecurityEffort {
 #[derive(Debug)]
 pub struct SyscallMonitor {
     blocked_syscalls: HashSet<String>,
+    #[allow(dead_code)]
     monitored_syscalls: HashSet<String>,
 }
 
@@ -307,7 +308,9 @@ pub struct SecretPattern {
 /// Behavioral analysis component
 #[derive(Debug)]
 pub struct BehaviorAnalyzer {
+    #[allow(dead_code)]
     baseline_behavior: BaselineBehavior,
+    #[allow(dead_code)]
     anomaly_threshold: f64,
 }
 
@@ -439,7 +442,7 @@ impl SecurityMonitor {
     /// Collect security violations
     async fn collect_security_violations(
         &self,
-        env: &ExecutionEnvironment,
+        _env: &ExecutionEnvironment,
     ) -> Result<Vec<SecurityViolation>> {
         let mut violations = Vec::new();
 
@@ -460,12 +463,12 @@ impl SecurityMonitor {
     }
 
     /// Collect identified vulnerabilities
-    async fn collect_vulnerabilities(&self, codebase: &Codebase) -> Result<Vec<Vulnerability>> {
+    async fn collect_vulnerabilities(&self, _codebase: &Codebase) -> Result<Vec<Vulnerability>> {
         self.vulnerability_scanner.get_findings().await
     }
 
     /// Collect detected secrets
-    async fn collect_secrets(&self, codebase: &Codebase) -> Result<Vec<SecretFindings>> {
+    async fn collect_secrets(&self, _codebase: &Codebase) -> Result<Vec<SecretFindings>> {
         self.secrets_detector.get_findings().await
     }
 
@@ -475,31 +478,30 @@ impl SecurityMonitor {
     }
 
     /// Run compliance checks
-    async fn run_compliance_checks(&self, codebase: &Codebase) -> Result<Vec<ComplianceCheck>> {
-        let mut checks = Vec::new();
-
-        // OWASP Top 10 checks
-        checks.push(ComplianceCheck {
-            standard: "OWASP Top 10".to_string(),
-            check_name: "Injection Prevention".to_string(),
-            status: ComplianceStatus::Pass,
-            description: "Check for injection vulnerabilities".to_string(),
-            requirements: vec![
-                "Input validation".to_string(),
-                "Parameterized queries".to_string(),
-            ],
-            findings: vec![],
-        });
-
-        // CIS Security Controls
-        checks.push(ComplianceCheck {
-            standard: "CIS Controls".to_string(),
-            check_name: "Secure Configuration".to_string(),
-            status: ComplianceStatus::Warning,
-            description: "Check for secure configuration practices".to_string(),
-            requirements: vec!["Hardened configurations".to_string()],
-            findings: vec!["Default credentials detected".to_string()],
-        });
+    async fn run_compliance_checks(&self, _codebase: &Codebase) -> Result<Vec<ComplianceCheck>> {
+        let checks = vec![
+            // OWASP Top 10 checks
+            ComplianceCheck {
+                standard: "OWASP Top 10".to_string(),
+                check_name: "Injection Prevention".to_string(),
+                status: ComplianceStatus::Pass,
+                description: "Check for injection vulnerabilities".to_string(),
+                requirements: vec![
+                    "Input validation".to_string(),
+                    "Parameterized queries".to_string(),
+                ],
+                findings: vec![],
+            },
+            // CIS Security Controls
+            ComplianceCheck {
+                standard: "CIS Controls".to_string(),
+                check_name: "Secure Configuration".to_string(),
+                status: ComplianceStatus::Warning,
+                description: "Check for secure configuration practices".to_string(),
+                requirements: vec!["Hardened configurations".to_string()],
+                findings: vec!["Default credentials detected".to_string()],
+            },
+        ];
 
         Ok(checks)
     }
@@ -575,7 +577,7 @@ impl SecurityMonitor {
         violations: &[SecurityViolation],
         vulnerabilities: &[Vulnerability],
         secrets: &[SecretFindings],
-        anomalies: &[BehavioralAnomaly],
+        _anomalies: &[BehavioralAnomaly],
     ) -> Result<Vec<SecurityRecommendation>> {
         let mut recommendations = Vec::new();
 
@@ -886,18 +888,18 @@ impl BehaviorAnalyzer {
     }
 
     /// Analyze behavior for anomalies
-    pub async fn analyze(&self, env: &ExecutionEnvironment) -> Result<Vec<BehavioralAnomaly>> {
-        let mut anomalies = Vec::new();
-
-        // Simulate behavioral analysis
-        anomalies.push(BehavioralAnomaly {
-            anomaly_type: AnomalyType::UnusualFileAccess,
-            severity: AnommalySeverity::Medium,
-            description: "Access to unexpected file locations".to_string(),
-            indicators: vec!["File access outside normal patterns".to_string()],
-            confidence: 0.75,
-            risk_assessment: "Medium risk - monitor for data exfiltration".to_string(),
-        });
+    pub async fn analyze(&self, _env: &ExecutionEnvironment) -> Result<Vec<BehavioralAnomaly>> {
+        let anomalies = vec![
+            // Simulate behavioral analysis
+            BehavioralAnomaly {
+                anomaly_type: AnomalyType::UnusualFileAccess,
+                severity: AnommalySeverity::Medium,
+                description: "Access to unexpected file locations".to_string(),
+                indicators: vec!["File access outside normal patterns".to_string()],
+                confidence: 0.75,
+                risk_assessment: "Medium risk - monitor for data exfiltration".to_string(),
+            },
+        ];
 
         Ok(anomalies)
     }

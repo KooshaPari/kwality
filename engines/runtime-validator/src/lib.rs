@@ -32,6 +32,7 @@ pub struct RuntimeValidator {
     performance_profiler: PerformanceProfiler,
     security_monitor: SecurityMonitor,
     fuzzing_engine: FuzzingEngine,
+    #[allow(dead_code)]
     metrics_collector: MetricsCollector,
     config: RuntimeConfig,
 }

@@ -3,7 +3,7 @@
 //! This module provides comprehensive metrics collection, aggregation, and analysis
 //! for monitoring validation performance and system health.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, Mutex};
@@ -687,6 +687,7 @@ impl TimeSeriesBuffer {
         }
     }
 
+    #[allow(dead_code)]
     fn add_point(&mut self, series: &mut VecDeque<TimeSeriesPoint>, value: f64) {
         series.push_back(TimeSeriesPoint {
             timestamp: SystemTime::now(),

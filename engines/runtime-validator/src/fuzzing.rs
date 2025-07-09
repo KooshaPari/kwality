@@ -322,8 +322,8 @@ impl FuzzingEngine {
     /// Execute code with given input (simplified simulation)
     async fn execute_with_input(
         &self,
-        env: &ExecutionEnvironment,
-        input: &str,
+        _env: &ExecutionEnvironment,
+        _input: &str,
     ) -> Result<ExecutionResult> {
         // Simplified execution result for demonstration
         // In a real implementation, this would execute the code with the input
@@ -427,6 +427,7 @@ struct ExecutionResult {
     execution_time: Duration,
     memory_usage: u64,
     execution_path: String,
+    #[allow(dead_code)]
     stdout: String,
     stderr: String,
 }
