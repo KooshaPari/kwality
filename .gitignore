@@ -251,6 +251,7 @@ Thumbs.db
 *.dll
 *.so
 *.dylib
+kwality
 /bin/
 /target/
 *.test
