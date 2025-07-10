@@ -102,8 +102,14 @@ jobs:
           echo "Go module file exists: $(ls -la go.mod)"
           echo "Go version: $(go version)"
           echo "GO111MODULE value: $GO111MODULE"
+          echo "Cleaning Go module cache..."
+          go clean -modcache
+          echo "Running go mod tidy..."
           go mod tidy
+          echo "Downloading dependencies..."
           go mod download
+          echo "Verifying module..."
+          go mod verify
 
       - name: Set up Rust for runtime validator
         uses: dtolnay/rust-toolchain@stable
@@ -114,14 +120,15 @@ jobs:
         working-directory: engines/runtime-validator
         run: cargo build --release
 
-      - name: Run Go linter
-        uses: golangci/golangci-lint-action@v3
-        continue-on-error: true
+      - name: Install and run Go linter
         env:
           GO111MODULE: on
-        with:
-          version: latest
-          args: --timeout=5m
+        continue-on-error: true
+        run: |
+          echo "Installing golangci-lint..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
+          echo "Running golangci-lint with GO111MODULE=$GO111MODULE..."
+          $(go env GOPATH)/bin/golangci-lint run --timeout=5m
 
       - name: Verify Go module setup
         env:
