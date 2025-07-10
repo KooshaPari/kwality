@@ -97,7 +97,13 @@ jobs:
       - name: Download Go dependencies
         env:
           GO111MODULE: on
-        run: go mod download
+        run: |
+          echo "Current working directory: $(pwd)"
+          echo "Go module file exists: $(ls -la go.mod)"
+          echo "Go version: $(go version)"
+          echo "GO111MODULE value: $GO111MODULE"
+          go mod tidy
+          go mod download
 
       - name: Set up Rust for runtime validator
         uses: dtolnay/rust-toolchain@stable
@@ -116,6 +122,20 @@ jobs:
         with:
           version: latest
           args: --timeout=5m
+
+      - name: Verify Go module setup
+        env:
+          GO111MODULE: on
+        run: |
+          echo "Verifying Go module setup..."
+          echo "Current directory: $(pwd)"
+          echo "GO111MODULE: $GO111MODULE"
+          echo "Module info:"
+          go mod graph | head -5 || echo "No module graph available"
+          echo "Module verification:"
+          go list -m || echo "Module list failed"
+          echo "Available packages:"
+          go list ./... | head -10 || echo "Package list failed"
 
       - name: Run Go tests
         env:
@@ -157,6 +177,7 @@ jobs:
           REDIS_PORT: 6379
           KWALITY_ENV: test
         run: |
+          echo "Integration tests - GO111MODULE: $GO111MODULE"
           # Check if integration test files exist
           if find ./tests/integration -name '*_test.go' -type f 2>/dev/null | grep -q .; then
             echo "Found integration test files, running tests..."
