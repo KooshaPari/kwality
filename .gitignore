@@ -191,8 +191,13 @@ python-tests/.pytest_cache/
 claude-api-key.txt
 openai-api-key.txt
 
-# Model artifacts
-models/
+# Model artifacts (excluding Go source code)
+/models/
+*.model
+*.pkl
+*.h5
+*.pb
+*.onnx
 embeddings/
 fine-tuned-models/
 
