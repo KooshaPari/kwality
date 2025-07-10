@@ -149,6 +149,8 @@ jobs:
           go list -m || echo "Module list failed"
           echo "Available packages:"
           go list ./... | head -10 || echo "Package list failed"
+          echo "Testing models package import directly..."
+          go run test_models_import.go || echo "Models import test failed"
 
       - name: Run Go tests
         env:
