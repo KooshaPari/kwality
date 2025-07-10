@@ -97,11 +97,14 @@ jobs:
       - name: Download Go dependencies
         env:
           GO111MODULE: on
+          GOPATH: ""
         run: |
           echo "Current working directory: $(pwd)"
           echo "Go module file exists: $(ls -la go.mod)"
           echo "Go version: $(go version)"
           echo "GO111MODULE value: $GO111MODULE"
+          echo "GOPATH value: '$GOPATH'"
+          echo "GOROOT value: $(go env GOROOT)"
           echo "Cleaning Go module cache..."
           go clean -modcache
           echo "Running go mod tidy..."
@@ -123,20 +126,23 @@ jobs:
       - name: Install and run Go linter
         env:
           GO111MODULE: on
+          GOPATH: ""
         continue-on-error: true
         run: |
           echo "Installing golangci-lint..."
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin latest
-          echo "Running golangci-lint with GO111MODULE=$GO111MODULE..."
+          echo "Running golangci-lint with GO111MODULE=$GO111MODULE, GOPATH='$GOPATH'..."
           $(go env GOPATH)/bin/golangci-lint run --timeout=5m
 
       - name: Verify Go module setup
         env:
           GO111MODULE: on
+          GOPATH: ""
         run: |
           echo "Verifying Go module setup..."
           echo "Current directory: $(pwd)"
           echo "GO111MODULE: $GO111MODULE"
+          echo "GOPATH: '$GOPATH'"
           echo "Module info:"
           go mod graph | head -5 || echo "No module graph available"
           echo "Module verification:"
@@ -147,6 +153,7 @@ jobs:
       - name: Run Go tests
         env:
           GO111MODULE: on
+          GOPATH: ""
           DB_HOST: localhost
           DB_PORT: 5432
           DB_DATABASE: kwality_test
@@ -156,6 +163,7 @@ jobs:
           REDIS_PORT: 6379
           KWALITY_ENV: test
         run: |
+          echo "Running Go tests with GO111MODULE=$GO111MODULE, GOPATH='$GOPATH'"
           # Check if test files exist before running tests
           if find . -name '*_test.go' -type f | grep -q .; then
             echo "Found Go test files, running tests..."
@@ -177,6 +185,7 @@ jobs:
       - name: Run integration tests
         env:
           GO111MODULE: on
+          GOPATH: ""
           DB_HOST: localhost
           DB_PORT: 5432
           DB_DATABASE: kwality_test
@@ -184,7 +193,7 @@ jobs:
           REDIS_PORT: 6379
           KWALITY_ENV: test
         run: |
-          echo "Integration tests - GO111MODULE: $GO111MODULE"
+          echo "Integration tests - GO111MODULE: $GO111MODULE, GOPATH: '$GOPATH'"
           # Check if integration test files exist
           if find ./tests/integration -name '*_test.go' -type f 2>/dev/null | grep -q .; then
             echo "Found integration test files, running tests..."
