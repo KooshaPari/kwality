@@ -558,7 +558,11 @@ func (g *GolangCILinter) Lint(ctx context.Context, codebase *models.Codebase) ([
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		if err := os.RemoveAll(tempDir); err != nil {
+			g.logger.Error("Failed to clean up temp directory", "dir", tempDir, "error", err)
+		}
+	}()
 
 	// Write Go files to temp directory
 	for _, file := range codebase.Files {

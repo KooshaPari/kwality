@@ -248,7 +248,11 @@ func (m *Manager) runMigrations() error {
 	if err != nil {
 		return fmt.Errorf("failed to get executed migrations: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			m.logger.Error("Failed to close rows", "error", err)
+		}
+	}()
 
 	executedMigrations := make(map[string]bool)
 	for rows.Next() {
@@ -422,7 +426,11 @@ func (m *Manager) Neo4jExecuteQuery(ctx context.Context, query string, params ma
 	session := m.neo4j.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: m.config.Neo4j.Database,
 	})
-	defer session.Close(ctx)
+	defer func() {
+		if err := session.Close(ctx); err != nil {
+			m.logger.Error("Failed to close Neo4j session", "error", err)
+		}
+	}()
 	
 	return session.Run(ctx, query, params)
 }
@@ -436,7 +444,11 @@ func (m *Manager) Neo4jExecuteReadTransaction(ctx context.Context, work neo4j.Ma
 	session := m.neo4j.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: m.config.Neo4j.Database,
 	})
-	defer session.Close(ctx)
+	defer func() {
+		if err := session.Close(ctx); err != nil {
+			m.logger.Error("Failed to close Neo4j session", "error", err)
+		}
+	}()
 	
 	return session.ExecuteRead(ctx, work)
 }
@@ -450,7 +462,11 @@ func (m *Manager) Neo4jExecuteWriteTransaction(ctx context.Context, work neo4j.M
 	session := m.neo4j.NewSession(ctx, neo4j.SessionConfig{
 		DatabaseName: m.config.Neo4j.Database,
 	})
-	defer session.Close(ctx)
+	defer func() {
+		if err := session.Close(ctx); err != nil {
+			m.logger.Error("Failed to close Neo4j session", "error", err)
+		}
+	}()
 	
 	return session.ExecuteWrite(ctx, work)
 }

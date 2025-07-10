@@ -426,7 +426,11 @@ func (s *Server) websocketHandler(c *gin.Context) {
 		s.logger.Error("WebSocket upgrade failed", "error", err)
 		return
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			s.logger.Error("Failed to close WebSocket connection", "error", err)
+		}
+	}()
 
 	// Register client
 	s.wsClientsMutex.Lock()
@@ -533,7 +537,9 @@ func (s *Server) BroadcastValidationUpdate(validationID string, update interface
 			s.logger.Error("Failed to send WebSocket message", "error", err)
 			// Remove failed connection
 			delete(s.wsClients, conn)
-			conn.Close()
+			if err := conn.Close(); err != nil {
+				s.logger.Error("Failed to close WebSocket connection", "error", err)
+			}
 		}
 	}
 }

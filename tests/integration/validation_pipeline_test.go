@@ -35,12 +35,12 @@ type ValidationPipelineTestSuite struct {
 // SetupSuite runs before all tests in the suite
 func (suite *ValidationPipelineTestSuite) SetupSuite() {
 	// Set up test environment
-	os.Setenv("KWALITY_ENV", "test")
-	os.Setenv("DB_HOST", "localhost")
-	os.Setenv("DB_PORT", "5432")
-	os.Setenv("DB_DATABASE", "kwality_test")
-	os.Setenv("REDIS_HOST", "localhost")
-	os.Setenv("REDIS_PORT", "6379")
+	require.NoError(suite.T(), os.Setenv("KWALITY_ENV", "test"))
+	require.NoError(suite.T(), os.Setenv("DB_HOST", "localhost"))
+	require.NoError(suite.T(), os.Setenv("DB_PORT", "5432"))
+	require.NoError(suite.T(), os.Setenv("DB_DATABASE", "kwality_test"))
+	require.NoError(suite.T(), os.Setenv("REDIS_HOST", "localhost"))
+	require.NoError(suite.T(), os.Setenv("REDIS_PORT", "6379"))
 
 	// Load test configuration
 	cfg, err := config.Load()

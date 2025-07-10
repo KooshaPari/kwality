@@ -6,5 +6,5 @@ src/main.rs:
 Cargo.toml:
 
 # env-dep:CARGO_PKG_VERSION=1.0.0
-# env-dep:CLIPPY_ARGS=--no-deps__CLIPPY_HACKERY__
+# env-dep:CLIPPY_ARGS=-D__CLIPPY_HACKERY__warnings__CLIPPY_HACKERY__
 # env-dep:CLIPPY_CONF_DIR

@@ -42,7 +42,9 @@ func (suite *RuntimeValidatorTestSuite) SetupSuite() {
 // TearDownSuite cleans up the test environment
 func (suite *RuntimeValidatorTestSuite) TearDownSuite() {
 	if suite.tempDir != "" {
-		os.RemoveAll(suite.tempDir)
+		if err := os.RemoveAll(suite.tempDir); err != nil {
+			suite.T().Logf("Warning: failed to clean up temp directory: %v", err)
+		}
 	}
 }
 

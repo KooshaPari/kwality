@@ -232,7 +232,11 @@ func (e *Engine) getTestsForSuite(suiteID string) ([]Test, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			e.logger.Warn("Failed to close rows", "error", err)
+		}
+	}()
 
 	var tests []Test
 	for rows.Next() {
