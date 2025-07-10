@@ -106,7 +106,9 @@ func (e *Engine) ExecuteValidation(ctx context.Context, execution *TestExecution
 		}
 		
 		// Update test result
-		e.updateTestResult(execution.ExecutionID, execution.TestID, result)
+		if err := e.updateTestResult(execution.ExecutionID, execution.TestID, result); err != nil {
+			e.logger.Error("Failed to update test result", "error", err)
+		}
 		return result, fmt.Errorf("no validator found for target type: %s", execution.TargetType)
 	}
 
@@ -128,7 +130,9 @@ func (e *Engine) ExecuteValidation(ctx context.Context, execution *TestExecution
 	}
 
 	// Update test result in database
-	e.updateTestResult(execution.ExecutionID, execution.TestID, result)
+	if err := e.updateTestResult(execution.ExecutionID, execution.TestID, result); err != nil {
+		e.logger.Error("Failed to update test result", "error", err)
+	}
 
 	e.logger.Info("Validation completed",
 		"execution_id", execution.ExecutionID,

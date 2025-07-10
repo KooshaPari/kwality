@@ -322,7 +322,11 @@ func (m *Manager) executeMigration(migrationDir, filename string) error {
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			m.logger.Warn("Failed to rollback transaction", "error", err)
+		}
+	}()
 
 	// Execute migration SQL
 	if _, err := tx.Exec(string(migrationSQL)); err != nil {
@@ -373,7 +377,11 @@ func (m *Manager) Transaction(fn func(*sql.Tx) error) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			m.logger.Warn("Failed to rollback transaction", "error", err)
+		}
+	}()
 
 	if err := fn(tx); err != nil {
 		return err

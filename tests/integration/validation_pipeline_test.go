@@ -81,7 +81,9 @@ func (suite *ValidationPipelineTestSuite) TearDownSuite() {
 		suite.server.Close()
 	}
 	if suite.orchestrator != nil {
-		suite.orchestrator.Shutdown(context.Background())
+		if err := suite.orchestrator.Shutdown(context.Background()); err != nil {
+			suite.T().Logf("Failed to shutdown orchestrator: %v", err)
+		}
 	}
 }
 

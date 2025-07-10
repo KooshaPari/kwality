@@ -342,7 +342,7 @@ func (suite *RuntimeValidatorTestSuite) runValidation(request RuntimeValidationR
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, suite.validatorBinary, "--validate", requestFile, "--output", outputFile)
+	cmd := exec.CommandContext(ctx, suite.validatorBinary, "--input", requestFile, "--output", outputFile)
 	cmd.Env = append(os.Environ(), "RUST_LOG=debug")
 	
 	output, err := cmd.CombinedOutput()

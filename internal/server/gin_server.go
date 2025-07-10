@@ -155,8 +155,9 @@ func setupTestRoutes(router *gin.Engine, config Config) {
 
 				// Submit to orchestrator if available
 				if config.Orchestrator != nil {
-					// Convert request to codebase and config
-					// This is simplified for testing
+					// TODO: Convert request to codebase and config
+					// This is simplified for testing - implement actual orchestrator submission
+					_ = config.Orchestrator // Suppress unused variable warning for now
 				}
 
 				c.JSON(http.StatusAccepted, gin.H{
