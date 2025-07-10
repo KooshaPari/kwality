@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -118,6 +119,10 @@ type SecurityConfig struct {
 
 // Load loads configuration from environment variables
 func Load() (*Config, error) {
+	// Validate required environment variables
+	if err := validateRequiredEnvVars(); err != nil {
+		return nil, err
+	}
 	cfg := &Config{
 		Environment: getEnvString("KWALITY_ENV", "development"),
 		Server: ServerConfig{
@@ -195,6 +200,21 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// validateRequiredEnvVars ensures critical security environment variables are set
+func validateRequiredEnvVars() error {
+	requiredVars := []string{
+		"JWT_SECRET",
+		"DB_PASSWORD",
+	}
+	
+	for _, envVar := range requiredVars {
+		if os.Getenv(envVar) == "" {
+			return fmt.Errorf("required environment variable %s is not set", envVar)
+		}
+	}
+	return nil
 }
 
 // Helper functions for environment variable parsing
