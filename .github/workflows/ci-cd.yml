@@ -149,13 +149,6 @@ jobs:
           go list -m || echo "Module list failed"
           echo "Available packages:"
           go list ./... | head -10 || echo "Package list failed"
-          echo "Testing models package compilation..."
-          echo "Trying to build models package in isolation:"
-          go build -v ./internal/models || echo "Models package build failed"
-          echo "Checking for circular dependencies:"
-          go list -f '{{.ImportPath}}: {{.Imports}}' ./internal/models || echo "Models dependency check failed"
-          echo "Testing models package import directly..."
-          go run test_models_import.go || echo "Models import test failed"
 
       - name: Run Go tests
         env:
