@@ -15,7 +15,7 @@
 
 ## 🎬 Platform Demo
 
-![Kwality Demo](screenshots/kwality-demo.gif)
+![Kwality Basic Validation Demo](demos/kwality-basic-validation.gif)
 
 *Complete validation workflow from code submission to security-hardened deployment*
 
@@ -58,7 +58,9 @@ kwality server --port 8080
 kwality health
 ```
 
-![Installation Demo](screenshots/kwality-installation-demo.gif)
+![Kwality Installation Demo](demos/kwality-installation.gif)
+
+*Step-by-step installation process from prerequisites to first validation*
 
 ## 🎯 Problem Statement
 
@@ -353,7 +355,9 @@ validation:
 - 🔍 **SAST Integration** - Semgrep, CodeQL, Trivy scanning
 - 📊 **Compliance Ready** - SOC 2, ISO 27001, GDPR compliance
 
-![Security Validation Demo](screenshots/kwality-security-demo.gif)
+![Kwality Security Scanning Demo](demos/kwality-security-scan.gif)
+
+*Comprehensive security scanning with vulnerability detection and compliance reporting*
 
 ### Automated Security Pipeline
 
@@ -583,9 +587,15 @@ kubectl scale deployment kwality-runtime-validator --replicas=5 -n kwality
 kubectl get hpa -n kwality
 ```
 
-![Deployment Demo](screenshots/kwality-deployment-demo.gif)
+![Kwality Deployment Demo](demos/kwality-deployment.gif)
+
+*Production deployment with Docker Compose and Kubernetes scaling capabilities*
 
 ## 🔌 API Reference
+
+![Kwality API Usage Demo](demos/kwality-api-usage.gif)
+
+*Real-time API integration with validation endpoints and health monitoring*
 
 ### Core Endpoints
 
